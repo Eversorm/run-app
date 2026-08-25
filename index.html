@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-title" content="Mik Run App">
 <title>Mik Run App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,6 +51,8 @@
       var(--bg);
   }
 
+  .hidden{ display:none; }
+
   .topbar{
     width:100%;
     max-width:440px;
@@ -82,8 +85,11 @@
   }
   .error .dot{ background:var(--danger); }
   .error .dot::after{ display:none; }
+  .paused .dot{ background:var(--warn); }
+  .paused .dot::after{ display:none; }
   @keyframes ping{ 0%{transform:scale(.6);opacity:.8;} 100%{transform:scale(2.1);opacity:0;} }
 
+  .topbar-actions{ display:flex; gap:8px; }
   .icon-btn{
     width:34px; height:34px;
     border-radius:10px;
@@ -202,7 +208,10 @@
     cursor:pointer;
   }
   .track-btn:active{ transform:scale(.98); }
-  .tracking-mode .track-btn{
+
+  .run-controls{ width:100%; max-width:440px; display:flex; gap:10px; }
+  .run-controls .track-btn{ width:auto; flex:1; }
+  .track-btn.end-btn{
     border-color:var(--danger);
     background:var(--danger-soft);
     color:var(--danger);
@@ -233,6 +242,7 @@
     transition:stroke-dashoffset .45s cubic-bezier(.3,.7,.3,1), stroke .3s ease;
   }
   .error .gauge-fill{ stroke:var(--danger); }
+  .paused .gauge-fill{ opacity:.45; }
 
   .reading{
     position:absolute;
@@ -268,6 +278,44 @@
   .stat-label{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); }
   .stat-value{ font-family:var(--font-display); font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; }
 
+  /* ---------- confirm modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(3,5,4,0.72);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px; z-index:50;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal-card{
+    background:#0f1513; border:1px solid var(--panel-border); border-radius:18px;
+    padding:20px; max-width:340px; width:100%;
+  }
+  .modal-text{ font-size:14px; line-height:1.5; margin:0 0 16px; }
+  .modal-actions{ display:flex; gap:10px; }
+  .modal-actions .track-btn{ width:auto; flex:1; padding:12px; font-size:14px; }
+
+  /* ---------- history screen ---------- */
+  .history-screen{ width:100%; max-width:440px; }
+  .history-title{ font-size:18px; font-weight:700; margin:2px 0 14px; }
+  .history-item{
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:16px;
+    padding:13px 14px; margin-bottom:10px; cursor:pointer;
+  }
+  .history-item-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .history-item-date{ font-size:12.5px; color:var(--text-dim); }
+  .history-item-sub{ font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .history-item-pace{ font-family:var(--font-display); font-weight:700; font-size:18px; white-space:nowrap; }
+  .history-item-pace span{ font-size:11px; color:var(--text-dim); font-weight:500; }
+
+  .history-detail{ display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--panel-border); }
+  .history-detail.open{ display:block; }
+  .history-chart{ width:100%; height:80px; margin-bottom:10px; display:block; }
+  .history-section-label{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:10px 0 6px; }
+  .split-row, .plan-row{
+    display:flex; justify-content:space-between; font-size:13px; padding:5px 0;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+  }
+  .split-row:last-child, .plan-row:last-child{ border-bottom:none; }
+
   @media (prefers-reduced-motion: reduce){
     .gauge-fill{ transition:none; }
     .dot::after{ animation:none; }
@@ -278,79 +326,104 @@
   <div class="app" id="app">
     <div class="topbar">
       <div class="status"><span class="dot"></span><span id="statusText">Pronto</span></div>
-      <button class="icon-btn" id="settingsToggle" type="button" aria-label="Impostazioni">⚙</button>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="historyToggle" type="button" aria-label="Attività">🕘</button>
+        <button class="icon-btn" id="settingsToggle" type="button" aria-label="Impostazioni">⚙</button>
+      </div>
     </div>
 
-    <section class="run-view" id="runView">
-      <div class="gauge-wrap">
-        <svg class="gauge" viewBox="0 0 300 300">
-          <circle class="gauge-track" cx="150" cy="150" r="130"></circle>
-          <circle class="gauge-fill" id="gaugeFill" cx="150" cy="150" r="130"></circle>
-        </svg>
-        <div class="reading">
-          <div class="pace-value" id="paceValue">--:--</div>
-          <div class="pace-unit">min/km</div>
-          <div class="pace-delta hidden" id="paceDelta"></div>
-        </div>
-      </div>
-
-      <div class="plan-status" id="planStatus"></div>
-
-      <div class="stats">
-        <div class="stat"><span class="stat-label">Precisione</span><span class="stat-value" id="accuracyValue">—</span></div>
-        <div class="stat"><span class="stat-label">Distanza</span><span class="stat-value" id="distValue">0.00 km</span></div>
-        <div class="stat"><span class="stat-label">Ritmo medio</span><span class="stat-value" id="avgValue">--:--</span></div>
-      </div>
-    </section>
-
-    <section class="setup-panel collapsed" id="settingsPanel">
-
-      <div class="setup-group">
-        <label class="switch-row">
-          <span>Ritmo obiettivo</span>
-          <input type="checkbox" id="targetEnabled">
-        </label>
-        <div class="target-inputs hidden" id="targetInputs">
-          <input type="number" id="targetMin" min="0" max="20" placeholder="min" value="6">
-          <span>:</span>
-          <input type="number" id="targetSec" min="0" max="59" placeholder="sec" value="30">
-          <span class="unit-tag">/km · tolleranza ±10s</span>
-        </div>
-      </div>
-
-      <div class="setup-group">
-        <label class="switch-row">
-          <span>Assistenza audio</span>
-          <input type="checkbox" id="audioEnabled">
-        </label>
-        <div class="audio-inputs hidden" id="audioInputs">
-          <span class="unit-tag">Ogni</span>
-          <input type="number" id="audioInterval" min="10" value="500">
-          <select id="audioTrigger">
-            <option value="distance">metri</option>
-            <option value="time">secondi</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="setup-group">
-        <label class="switch-row">
-          <span>Piano di allenamento</span>
-          <input type="checkbox" id="planEnabled">
-        </label>
-        <div class="plan-builder hidden" id="planBuilder">
-          <div id="planSteps"></div>
-          <div class="plan-actions">
-            <button class="ghost-btn" id="addStepBtn" type="button">+ Passo</button>
-            <button class="ghost-btn" id="addGroupBtn" type="button">+ Gruppo ripetuto</button>
+    <div id="mainScreen">
+      <section class="run-view" id="runView">
+        <div class="gauge-wrap">
+          <svg class="gauge" viewBox="0 0 300 300">
+            <circle class="gauge-track" cx="150" cy="150" r="130"></circle>
+            <circle class="gauge-fill" id="gaugeFill" cx="150" cy="150" r="130"></circle>
+          </svg>
+          <div class="reading">
+            <div class="pace-value" id="paceValue">--:--</div>
+            <div class="pace-unit">min/km</div>
+            <div class="pace-delta hidden" id="paceDelta"></div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <div class="controls">
-      <button class="track-btn" id="trackBtn" type="button">Avvia corsa</button>
-      <p class="hint" id="hintText">Tocca per attivare il GPS. Funziona meglio all'aperto, lontano da edifici alti.</p>
+        <div class="plan-status" id="planStatus"></div>
+
+        <div class="stats">
+          <div class="stat"><span class="stat-label">Precisione</span><span class="stat-value" id="accuracyValue">—</span></div>
+          <div class="stat"><span class="stat-label">Distanza</span><span class="stat-value" id="distValue">0.00 km</span></div>
+          <div class="stat"><span class="stat-label">Ritmo medio</span><span class="stat-value" id="avgValue">--:--</span></div>
+        </div>
+      </section>
+
+      <section class="setup-panel collapsed" id="settingsPanel">
+
+        <div class="setup-group">
+          <label class="switch-row">
+            <span>Ritmo obiettivo</span>
+            <input type="checkbox" id="targetEnabled">
+          </label>
+          <div class="target-inputs hidden" id="targetInputs">
+            <input type="number" id="targetMin" min="0" max="20" placeholder="min" value="6">
+            <span>:</span>
+            <input type="number" id="targetSec" min="0" max="59" placeholder="sec" value="30">
+            <span class="unit-tag">/km · tolleranza ±10s</span>
+          </div>
+        </div>
+
+        <div class="setup-group">
+          <label class="switch-row">
+            <span>Assistenza audio</span>
+            <input type="checkbox" id="audioEnabled">
+          </label>
+          <div class="audio-inputs hidden" id="audioInputs">
+            <span class="unit-tag">Ogni</span>
+            <input type="number" id="audioInterval" min="10" value="500">
+            <select id="audioTrigger">
+              <option value="distance">metri</option>
+              <option value="time">secondi</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setup-group">
+          <label class="switch-row">
+            <span>Piano di allenamento</span>
+            <input type="checkbox" id="planEnabled">
+          </label>
+          <div class="plan-builder hidden" id="planBuilder">
+            <div id="planSteps"></div>
+            <div class="plan-actions">
+              <button class="ghost-btn" id="addStepBtn" type="button">+ Passo</button>
+              <button class="ghost-btn" id="addGroupBtn" type="button">+ Gruppo ripetuto</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="controls">
+        <button class="track-btn" id="startBtn" type="button">Avvia corsa</button>
+        <div class="run-controls hidden" id="runControls">
+          <button class="track-btn" id="pauseBtn" type="button">Pausa</button>
+          <button class="track-btn end-btn" id="endBtn" type="button">Termina</button>
+        </div>
+        <p class="hint" id="hintText">Tocca per attivare il GPS. Funziona meglio all'aperto, lontano da edifici alti.</p>
+      </div>
+    </div>
+
+    <section class="history-screen hidden" id="historyScreen">
+      <h2 class="history-title">Attività</h2>
+      <p class="hint" id="historyEmptyHint">Nessuna corsa salvata ancora.</p>
+      <div id="historyList"></div>
+    </section>
+  </div>
+
+  <div class="modal-overlay hidden" id="confirmModal">
+    <div class="modal-card">
+      <p class="modal-text">Vuoi davvero concludere la corsa? Verrà salvata nelle tue attività.</p>
+      <div class="modal-actions">
+        <button class="track-btn ghost-btn" id="confirmCancelBtn" type="button" style="border-style:solid">Annulla</button>
+        <button class="track-btn end-btn" id="confirmEndBtn" type="button">Concludi e salva</button>
+      </div>
     </div>
   </div>
 
@@ -364,14 +437,23 @@
   const TOLERANCE_SEC = 10;      // seconds/km window counted as "on target"
   const GAUGE_FAST_SEC = 270;    // 4:30/km -> gauge reads full
   const GAUGE_SLOW_SEC = 510;    // 8:30/km -> gauge reads empty
+  const MAX_PACE_SEC = 720;      // 12:00/km -> beyond this, show --:-- instead of a number
   const SPEED_SMOOTHING_ALPHA = 0.35;
+  const MIN_SAVE_DISTANCE_KM = 0.03; // don't save accidental taps with almost no distance
+  const RUNS_STORAGE_KEY = 'ritmoCorsaRuns';
+  const MAX_SAVED_RUNS = 100;
 
   // ---- DOM refs ----
   const appEl = document.getElementById('app');
   const statusText = document.getElementById('statusText');
   const settingsToggle = document.getElementById('settingsToggle');
   const settingsPanel = document.getElementById('settingsPanel');
-  const runView = document.getElementById('runView');
+  const mainScreen = document.getElementById('mainScreen');
+
+  const historyToggle = document.getElementById('historyToggle');
+  const historyScreen = document.getElementById('historyScreen');
+  const historyList = document.getElementById('historyList');
+  const historyEmptyHint = document.getElementById('historyEmptyHint');
 
   const targetEnabled = document.getElementById('targetEnabled');
   const targetInputs = document.getElementById('targetInputs');
@@ -389,8 +471,15 @@
   const addStepBtn = document.getElementById('addStepBtn');
   const addGroupBtn = document.getElementById('addGroupBtn');
 
-  const trackBtn = document.getElementById('trackBtn');
+  const startBtn = document.getElementById('startBtn');
+  const runControls = document.getElementById('runControls');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const endBtn = document.getElementById('endBtn');
   const hintText = document.getElementById('hintText');
+
+  const confirmModal = document.getElementById('confirmModal');
+  const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+  const confirmEndBtn = document.getElementById('confirmEndBtn');
 
   const gaugeFill = document.getElementById('gaugeFill');
   const paceValue = document.getElementById('paceValue');
@@ -407,11 +496,18 @@
   // ---- geo / run state ----
   let watchId = null;
   let tracking = false;
+  let paused = false;
   let lastPos = null;
   let smoothedSpeedKmh = 0;
-  let currentPaceSec = null; // null = stationary/too slow to show a pace
+  let currentPaceSec = null; // null = stationary/too slow/uncertain to show a pace
   let totalDistanceKm = 0;
   let trackingStartTime = null;
+
+  // ---- pause bookkeeping: pausedTotalMs is subtracted from any wall-clock
+  // duration so paused time never counts towards pace/duration/splits ----
+  let pausedTotalMs = 0;
+  let pauseStartTime = 0;
+  let pausedAtStart = 0;      // snapshot of pausedTotalMs when the run started
 
   // ---- audio cadence state ----
   let lastAnnounceDistanceM = 0;
@@ -424,7 +520,16 @@
   let planIndex = -1;
   let planSegStartDistM = 0;
   let planSegStartTime = 0;
+  let pausedAtSegStart = 0;
   let planTickTimer = null;
+
+  // ---- session logging (for the saved activity record) ----
+  let sessionPaceSamples = [];
+  let sessionKmSplits = [];
+  let sessionPlanLog = [];
+  let lastKmCount = 0;
+  let lastKmBoundaryTime = 0;
+  let pausedAtLastKmBoundary = 0;
 
   // ===================================================================
   // Small formatting helpers
@@ -442,6 +547,22 @@
     const m = Math.floor(sec / 60);
     const s = Math.round(sec % 60);
     return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function formatDuration(sec){
+    sec = Math.round(sec);
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  function formatDateIt(ts){
+    return new Date(ts).toLocaleDateString('it-IT', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+  }
+
+  // active (non-paused) milliseconds elapsed since a reference timestamp,
+  // given the pausedTotalMs snapshot taken when that reference was set.
+  function activeMsSince(refTime, pausedSnapshot){
+    return (Date.now() - refTime) - (pausedTotalMs - pausedSnapshot);
   }
 
   // Spoken form uses plain digits — the it-IT voice reads "5 e 30" as "cinque e trenta".
@@ -517,6 +638,7 @@
   });
 
   settingsToggle.addEventListener('click', () => {
+    showMainScreen();
     const collapsed = settingsPanel.classList.toggle('collapsed');
     settingsToggle.classList.toggle('active', !collapsed);
   });
@@ -631,6 +753,7 @@
     const seg = planSegments[index];
     planSegStartDistM = totalDistanceKm * 1000;
     planSegStartTime = Date.now();
+    pausedAtSegStart = pausedTotalMs;
     speak(buildTransitionMessage(seg));
     renderPlanStatus();
   }
@@ -644,6 +767,17 @@
     planStatus.innerHTML = `Passo <span class="hl">${planIndex + 1}/${planSegments.length}</span> · ${label} ${amount}${rep}`;
   }
 
+  function logCompletedSegment(seg){
+    const segElapsedSec = activeMsSince(planSegStartTime, pausedAtSegStart) / 1000;
+    const segDistM = totalDistanceKm * 1000 - planSegStartDistM;
+    const achievedPaceSec = segDistM > 1 ? segElapsedSec / (segDistM / 1000) : null;
+    sessionPlanLog.push({
+      mode: seg.mode, durType: seg.durType, durValue: seg.durValue, paceSec: seg.paceSec,
+      repIndex: seg.repIndex, repTotal: seg.repTotal,
+      achievedPaceSec, actualDurationSec: segElapsedSec, actualDistanceM: segDistM
+    });
+  }
+
   function checkPlanProgress(){
     if (!planActive || planIndex < 0) return;
     const seg = planSegments[planIndex];
@@ -651,9 +785,10 @@
     if (seg.durType === 'distance'){
       done = (totalDistanceKm * 1000 - planSegStartDistM) >= seg.durValue;
     } else {
-      done = (Date.now() - planSegStartTime) / 1000 >= seg.durValue;
+      done = activeMsSince(planSegStartTime, pausedAtSegStart) / 1000 >= seg.durValue;
     }
     if (done){
+      logCompletedSegment(seg);
       if (planIndex + 1 < planSegments.length){
         startPlanSegment(planIndex + 1);
       } else {
@@ -709,8 +844,8 @@
 
     distValue.textContent = `${totalDistanceKm.toFixed(2)} km`;
     if (trackingStartTime && totalDistanceKm > 0.05){
-      const elapsedSec = (Date.now() - trackingStartTime) / 1000;
-      avgValue.textContent = formatPace(elapsedSec / totalDistanceKm);
+      const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
+      avgValue.textContent = formatPace(activeElapsedSec / totalDistanceKm);
     }
   }
 
@@ -736,14 +871,26 @@
     }
 
     smoothedSpeedKmh += SPEED_SMOOTHING_ALPHA * (speedKmh - smoothedSpeedKmh);
-    currentPaceSec = smoothedSpeedKmh > 0.6 ? 3600 / smoothedSpeedKmh : null;
+    const rawPaceSec = smoothedSpeedKmh > 0.05 ? 3600 / smoothedSpeedKmh : Infinity;
+    currentPaceSec = rawPaceSec <= MAX_PACE_SEC ? rawPaceSec : null;
 
     const accOk = accuracy == null || accuracy <= 30;
     if (lastPos && accOk){
       totalDistanceKm += haversineKm(lastPos.lat, lastPos.lon, latitude, longitude);
     }
-
     lastPos = { lat: latitude, lon: longitude, time: now };
+
+    // ---- session logging for the saved activity record ----
+    const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
+    sessionPaceSamples.push({ t: activeElapsedSec, d: totalDistanceKm, p: currentPaceSec });
+    while (Math.floor(totalDistanceKm) > lastKmCount){
+      lastKmCount++;
+      const splitSec = activeMsSince(lastKmBoundaryTime, pausedAtLastKmBoundary) / 1000;
+      sessionKmSplits.push({ km: lastKmCount, paceSec: splitSec });
+      lastKmBoundaryTime = Date.now();
+      pausedAtLastKmBoundary = pausedTotalMs;
+    }
+
     render();
     maybeAnnouncePeriodic();
   }
@@ -770,7 +917,7 @@
   }
 
   function onError(err){
-    stopTracking();
+    resetToIdle();
     if (err.code === 1){
       setStatus('Permesso negato', 'error');
       hintText.textContent = "Hai bloccato l'accesso alla posizione. Abilita la localizzazione per questa pagina nelle impostazioni del browser e riprova.";
@@ -784,7 +931,112 @@
   }
 
   // ===================================================================
-  // Start / stop
+  // Saved activities (localStorage)
+  // ===================================================================
+  function loadRuns(){
+    try { return JSON.parse(localStorage.getItem(RUNS_STORAGE_KEY) || '[]'); }
+    catch(e){ return []; }
+  }
+
+  function saveRun(run){
+    const runs = loadRuns();
+    runs.push(run);
+    while (runs.length > MAX_SAVED_RUNS) runs.shift();
+    try { localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs)); }
+    catch(e){ /* storage unavailable or full — the run just won't persist */ }
+  }
+
+  function buildPaceChartSvg(samples){
+    const valid = samples.filter(s => s.p != null);
+    if (valid.length < 2){
+      return '<text x="10" y="45" fill="#5E6F67" font-size="11">Dati insufficienti per il grafico</text>';
+    }
+    const paces = valid.map(s => s.p);
+    const pMin = Math.min(...paces), pMax = Math.max(...paces);
+    const dMax = valid[valid.length - 1].d || 1;
+    const pts = valid.map(s => {
+      const x = (s.d / dMax) * 400;
+      const y = pMax === pMin ? 40 : 8 + ((s.p - pMin) / (pMax - pMin)) * 64;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return `
+      <polyline points="${pts}" fill="none" stroke="#37D999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="4" y="14" fill="#5E6F67" font-size="10">${formatPace(pMin)} veloce</text>
+      <text x="4" y="78" fill="#5E6F67" font-size="10">${formatPace(pMax)} lento</text>
+    `;
+  }
+
+  function buildRunDetailHtml(run){
+    let html = `<svg class="history-chart" viewBox="0 0 400 84" preserveAspectRatio="none">${buildPaceChartSvg(run.paceSamples)}</svg>`;
+
+    if (run.kmSplits && run.kmSplits.length){
+      html += '<div class="history-section-label">Ritmo per km</div>';
+      run.kmSplits.forEach(s => {
+        html += `<div class="split-row"><span>Km ${s.km}</span><span>${formatPace(s.paceSec)} /km</span></div>`;
+      });
+    }
+
+    if (run.planLog && run.planLog.length){
+      html += '<div class="history-section-label">Ritmo per segmento del piano</div>';
+      run.planLog.forEach(seg => {
+        const rep = seg.repTotal ? ` (rip. ${seg.repIndex}/${seg.repTotal})` : '';
+        if (seg.mode === 'rest'){
+          html += `<div class="plan-row"><span>Recupero${rep}</span><span>${formatDuration(seg.actualDurationSec)}</span></div>`;
+        } else {
+          const target = seg.paceSec ? ` (obiettivo ${formatPace(seg.paceSec)})` : '';
+          html += `<div class="plan-row"><span>Corsa${rep}</span><span>${formatPace(seg.achievedPaceSec)}/km${target}</span></div>`;
+        }
+      });
+    }
+    return html;
+  }
+
+  function renderHistoryList(){
+    const runs = loadRuns().slice().reverse();
+    historyEmptyHint.classList.toggle('hidden', runs.length > 0);
+    historyList.innerHTML = '';
+    runs.forEach(run => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `
+        <div class="history-item-head">
+          <div>
+            <div class="history-item-date">${formatDateIt(run.startTime)}</div>
+            <div class="history-item-sub">${run.distanceKm.toFixed(2)} km · ${formatDuration(run.durationSec)}</div>
+          </div>
+          <div class="history-item-pace">${formatPace(run.avgPaceSec)}<span> /km</span></div>
+        </div>
+        <div class="history-detail"></div>
+      `;
+      item.querySelector('.history-item-head').addEventListener('click', () => {
+        const detail = item.querySelector('.history-detail');
+        const nowOpen = detail.classList.toggle('open');
+        if (nowOpen && !detail.dataset.built){
+          detail.innerHTML = buildRunDetailHtml(run);
+          detail.dataset.built = '1';
+        }
+      });
+      historyList.appendChild(item);
+    });
+  }
+
+  function showHistoryScreen(){
+    mainScreen.classList.add('hidden');
+    historyScreen.classList.remove('hidden');
+    historyToggle.classList.add('active');
+    renderHistoryList();
+  }
+  function showMainScreen(){
+    historyScreen.classList.add('hidden');
+    mainScreen.classList.remove('hidden');
+    historyToggle.classList.remove('active');
+  }
+  historyToggle.addEventListener('click', () => {
+    historyScreen.classList.contains('hidden') ? showHistoryScreen() : showMainScreen();
+  });
+
+  // ===================================================================
+  // Start / pause / resume / end
   // ===================================================================
   function startTracking(){
     if (!('geolocation' in navigator)){
@@ -799,9 +1051,19 @@
     currentPaceSec = null;
     totalDistanceKm = 0;
     trackingStartTime = Date.now();
+    pausedTotalMs = 0;
+    pausedAtStart = 0;
+    paused = false;
     lastAnnounceDistanceM = 0;
     lastAnnounceTimeMs = Date.now();
     lastAnnouncedTargetSec = null;
+
+    sessionPaceSamples = [];
+    sessionKmSplits = [];
+    sessionPlanLog = [];
+    lastKmCount = 0;
+    lastKmBoundaryTime = trackingStartTime;
+    pausedAtLastKmBoundary = 0;
 
     if (planEnabledBox.checked){
       planSegments = flattenPlan(buildPlanFromDOM());
@@ -815,40 +1077,97 @@
       planStatus.textContent = '';
     }
 
-    trackBtn.disabled = true;
     setStatus('Ricerca del segnale…');
     watchId = navigator.geolocation.watchPosition(onPosition, onError, {
       enableHighAccuracy: true, maximumAge: 0, timeout: 12000
     });
 
     tracking = true;
-    appEl.classList.add('tracking-mode');
+    appEl.classList.add('tracking-mode', 'tracking');
     appEl.classList.remove('error');
-    trackBtn.textContent = 'Termina corsa';
-    trackBtn.disabled = false;
     hintText.textContent = '';
     settingsPanel.classList.add('collapsed');
+    settingsToggle.classList.remove('active');
+    startBtn.classList.add('hidden');
+    runControls.classList.remove('hidden');
+    pauseBtn.textContent = 'Pausa';
   }
 
-  function stopTracking(){
+  function pauseTracking(){
+    if (!tracking || paused) return;
+    if (watchId != null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (planTickTimer){ clearInterval(planTickTimer); planTickTimer = null; }
+    paused = true;
+    pauseStartTime = Date.now();
+    appEl.classList.add('paused');
+    appEl.classList.remove('tracking');
+    setStatus('In pausa');
+    pauseBtn.textContent = 'Riprendi';
+  }
+
+  function resumeTracking(){
+    if (!tracking || !paused) return;
+    pausedTotalMs += Date.now() - pauseStartTime;
+    paused = false;
+    lastPos = null; // avoid a bogus jump computed from stale coordinates/time
+    appEl.classList.remove('paused');
+    appEl.classList.add('tracking');
+    setStatus('Ricerca del segnale…');
+    pauseBtn.textContent = 'Pausa';
+    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+      enableHighAccuracy: true, maximumAge: 0, timeout: 12000
+    });
+    if (planActive) planTickTimer = setInterval(checkPlanProgress, 1000);
+  }
+
+  function resetToIdle(){
     if (watchId != null) navigator.geolocation.clearWatch(watchId);
     if (planTickTimer) clearInterval(planTickTimer);
     watchId = null; planTickTimer = null;
-    tracking = false; planActive = false; planIndex = -1;
+    tracking = false; paused = false; planActive = false; planIndex = -1;
     window.speechSynthesis && window.speechSynthesis.cancel();
 
-    appEl.classList.remove('tracking-mode', 'error');
+    appEl.classList.remove('tracking-mode', 'tracking', 'paused', 'error');
     setStatus('Pronto');
-    trackBtn.textContent = 'Avvia corsa';
     hintText.textContent = "Tocca per attivare il GPS. Funziona meglio all'aperto, lontano da edifici alti.";
     settingsPanel.classList.add('collapsed');
     settingsToggle.classList.remove('active');
+    startBtn.classList.remove('hidden');
+    runControls.classList.add('hidden');
+    planStatus.textContent = '';
   }
 
-  trackBtn.addEventListener('click', () => { tracking ? stopTracking() : startTracking(); });
+  function finalizeAndSave(){
+    if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    if (planTickTimer) clearInterval(planTickTimer);
+
+    if (totalDistanceKm >= MIN_SAVE_DISTANCE_KM){
+      const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
+      saveRun({
+        id: Date.now(),
+        startTime: trackingStartTime,
+        durationSec: activeElapsedSec,
+        distanceKm: totalDistanceKm,
+        avgPaceSec: totalDistanceKm > 0 ? activeElapsedSec / totalDistanceKm : null,
+        paceSamples: sessionPaceSamples,
+        kmSplits: sessionKmSplits,
+        planLog: sessionPlanLog.length ? sessionPlanLog : null
+      });
+    }
+    resetToIdle();
+  }
+
+  startBtn.addEventListener('click', startTracking);
+  pauseBtn.addEventListener('click', () => { paused ? resumeTracking() : pauseTracking(); });
+  endBtn.addEventListener('click', () => confirmModal.classList.remove('hidden'));
+  confirmCancelBtn.addEventListener('click', () => confirmModal.classList.add('hidden'));
+  confirmEndBtn.addEventListener('click', () => {
+    confirmModal.classList.add('hidden');
+    finalizeAndSave();
+  });
 
   if (!('geolocation' in navigator)){
-    trackBtn.disabled = true;
+    startBtn.disabled = true;
     setStatus('Non supportato', 'error');
     hintText.textContent = 'Questo browser non espone le API di geolocalizzazione.';
   }
