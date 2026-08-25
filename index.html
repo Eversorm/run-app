@@ -211,6 +211,7 @@
   .track-btn:active{ transform:scale(.98); }
 
   .run-controls{ width:100%; max-width:440px; display:flex; gap:10px; }
+  .run-controls.hidden{ display:none; }
   .run-controls .track-btn{ width:auto; flex:1; }
   .track-btn.end-btn{
     border-color:var(--danger);
@@ -449,9 +450,11 @@
   const GAUGE_FAST_SEC = 270;      // 4:30/km -> gauge reads full
   const GAUGE_SLOW_SEC = 510;      // 8:30/km -> gauge reads empty
   const MAX_PACE_SEC = 1200;       // 20:00/km -> beyond this, show --:-- (includes walking)
-  const SPEED_SMOOTHING_ALPHA = 0.45;       // baseline smoothing factor
-  const SPEED_SMOOTHING_ALPHA_FAST = 0.75;  // used when a real pace change is detected
-  const SPEED_CHANGE_THRESHOLD_KMH = 1.2;   // delta beyond which we treat it as a real change, not GPS jitter
+  const SPEED_SMOOTHING_ALPHA_MIN = 0.85;   // used when GPS accuracy is good — almost raw, reacts fast
+  const SPEED_SMOOTHING_ALPHA_MAX = 0.30;   // used only when GPS accuracy is genuinely poor
+  const ACCURACY_GOOD_M = 20;               // at/below this, trust the fix almost fully
+  const ACCURACY_POOR_M = 35;               // at/above this, damp harder
+  const IMPLAUSIBLE_SPEED_KMH = 35;         // faster than this for a runner -> treat the fix as a glitch and drop it
   const MIN_SAVE_DISTANCE_KM = 0.03; // don't save accidental taps with almost no distance
   const RUNS_STORAGE_KEY = 'ritmoCorsaRuns';
   const MAX_SAVED_RUNS = 100;
@@ -559,6 +562,16 @@
     const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
     const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
     return 2 * RE * Math.asin(Math.sqrt(a));
+  }
+
+  // How hard to smooth the speed reading, driven purely by GPS accuracy —
+  // clean fix -> almost no smoothing (reacts immediately to real pace changes);
+  // noisy fix -> more smoothing, only as much as that specific fix needs.
+  function speedSmoothingAlpha(accuracy){
+    if (accuracy == null || accuracy <= ACCURACY_GOOD_M) return SPEED_SMOOTHING_ALPHA_MIN;
+    if (accuracy >= ACCURACY_POOR_M) return SPEED_SMOOTHING_ALPHA_MAX;
+    const t = (accuracy - ACCURACY_GOOD_M) / (ACCURACY_POOR_M - ACCURACY_GOOD_M);
+    return SPEED_SMOOTHING_ALPHA_MIN + t * (SPEED_SMOOTHING_ALPHA_MAX - SPEED_SMOOTHING_ALPHA_MIN);
   }
 
   function formatPace(sec){
@@ -936,14 +949,22 @@
       speedKmh = 0;
     }
 
-    // Adaptive smoothing: damp ordinary GPS jitter, but snap quickly to
-    // genuine pace changes instead of lagging behind them.
-    const rawDelta = Math.abs(speedKmh - smoothedSpeedKmh);
-    const alpha = rawDelta > SPEED_CHANGE_THRESHOLD_KMH ? SPEED_SMOOTHING_ALPHA_FAST : SPEED_SMOOTHING_ALPHA;
+    // A single fix implying an impossible speed for a runner is almost
+    // certainly a GPS glitch (position jump) — drop it entirely rather than
+    // letting it corrupt distance/pace, and wait for the next fix.
+    if (speedKmh > IMPLAUSIBLE_SPEED_KMH){
+      return;
+    }
+
+    // Minimal smoothing: only as much as the current fix's own accuracy
+    // calls for. A clean fix is taken almost as-is (reacts immediately to
+    // real pace changes); a noisy fix gets damped more.
+    const alpha = speedSmoothingAlpha(accuracy);
     smoothedSpeedKmh += alpha * (speedKmh - smoothedSpeedKmh);
 
     const rawPaceSec = smoothedSpeedKmh > 0.05 ? 3600 / smoothedSpeedKmh : Infinity;
     const instantPaceSec = rawPaceSec <= MAX_PACE_SEC ? rawPaceSec : null;
+
 
     // ---- auto-pause / auto-resume ----
     if (!paused && instantPaceSec == null){
