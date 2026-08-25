@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ritmo Corsa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#090c0b;
+    --panel:rgba(255,255,255,0.035);
+    --panel-border:rgba(255,255,255,0.08);
+    --accent:#37D999;
+    --accent-soft:rgba(55,217,153,0.16);
+    --warn:#FFB454;
+    --warn-soft:rgba(255,180,84,0.16);
+    --danger:#FF6B6B;
+    --danger-soft:rgba(255,107,107,0.14);
+    --text:#EAF2EC;
+    --text-dim:#5E6F67;
+    --track:rgba(255,255,255,0.07);
+    --font-display:'JetBrains Mono', monospace;
+    --font-ui:'Space Grotesk', sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    min-height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-ui);
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  input, select, button{ font-family:inherit; color:inherit; }
+
+  .app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+    padding:20px 18px calc(28px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(55,217,153,0.06), transparent 60%),
+      var(--bg);
+  }
+
+  .topbar{
+    width:100%;
+    max-width:440px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .status{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+
+  .dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--text-dim);
+    position:relative;
+    transition:background .3s ease;
+  }
+  .tracking .dot{ background:var(--accent); }
+  .tracking .dot::after{
+    content:''; position:absolute; inset:-5px; border-radius:50%;
+    border:1px solid var(--accent);
+    animation:ping 1.8s ease-out infinite;
+  }
+  .error .dot{ background:var(--danger); }
+  .error .dot::after{ display:none; }
+  @keyframes ping{ 0%{transform:scale(.6);opacity:.8;} 100%{transform:scale(2.1);opacity:0;} }
+
+  .icon-btn{
+    width:34px; height:34px;
+    border-radius:10px;
+    border:1px solid var(--panel-border);
+    background:var(--panel);
+    font-size:16px;
+    cursor:pointer;
+  }
+  .icon-btn.active{ border-color:var(--accent); color:var(--accent); }
+
+  /* ---------- setup panel ---------- */
+  .setup-panel{
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .setup-panel.collapsed{ display:none; }
+
+  .setup-group{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:16px;
+    padding:14px;
+  }
+
+  .switch-row{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:14px; font-weight:600;
+    cursor:pointer;
+  }
+  .switch-row input[type=checkbox]{
+    width:20px; height:20px; accent-color:var(--accent); cursor:pointer;
+  }
+
+  .target-inputs, .audio-inputs{
+    display:flex; align-items:center; gap:8px;
+    margin-top:12px;
+  }
+  .target-inputs.hidden, .audio-inputs.hidden, .plan-builder.hidden{ display:none; }
+
+  input[type=number], select{
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--panel-border);
+    border-radius:8px;
+    padding:8px 9px;
+    font-size:14px;
+    width:64px;
+  }
+  select{ width:auto; }
+
+  /* hide the increment/decrement spinner arrows on all number inputs */
+  input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+
+  .controls{
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+
+  .unit-tag{ font-size:13px; color:var(--text-dim); }
+
+  .plan-builder{ margin-top:12px; display:flex; flex-direction:column; gap:10px; }
+  .plan-actions{ display:flex; gap:8px; }
+  .ghost-btn{
+    flex:1;
+    background:transparent;
+    border:1px dashed var(--panel-border);
+    color:var(--text-dim);
+    border-radius:10px;
+    padding:9px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .ghost-btn:active{ border-color:var(--accent); color:var(--accent); }
+
+  .plan-step{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:8px;
+  }
+  .step-pace-group{ display:flex; align-items:center; gap:4px; }
+  .step-pace-group.hidden{ display:none; }
+  .step-remove, .group-remove{
+    margin-left:auto;
+    background:none; border:none; color:var(--text-dim);
+    font-size:15px; cursor:pointer; padding:4px;
+  }
+
+  .plan-group{
+    border:1px solid var(--panel-border);
+    border-radius:12px;
+    padding:10px;
+    background:rgba(255,255,255,0.02);
+  }
+  .group-header{
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:600;
+    margin-bottom:8px;
+  }
+  .group-steps{ display:flex; flex-direction:column; gap:6px; padding-left:10px; border-left:2px solid var(--panel-border); }
+
+  .track-btn{
+    width:100%; max-width:440px;
+    font-family:var(--font-ui);
+    font-weight:600; font-size:16px;
+    padding:15px;
+    border-radius:16px;
+    border:1px solid var(--accent);
+    background:var(--accent-soft);
+    color:var(--accent);
+    cursor:pointer;
+  }
+  .track-btn:active{ transform:scale(.98); }
+  .tracking-mode .track-btn{
+    border-color:var(--danger);
+    background:var(--danger-soft);
+    color:var(--danger);
+  }
+
+  .hint{
+    margin:0; font-size:12.5px; line-height:1.4; text-align:center;
+    color:var(--text-dim); max-width:360px;
+  }
+  .error .hint{ color:var(--danger); }
+
+  /* ---------- run view ---------- */
+  .run-view{
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+  }
+
+  .gauge-wrap{
+    position:relative;
+    width:min(66vw, 290px); height:min(66vw, 290px);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .gauge{ width:100%; height:100%; transform:rotate(-90deg); }
+  .gauge-track{ fill:none; stroke:var(--track); stroke-width:10; }
+  .gauge-fill{
+    fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round;
+    filter:drop-shadow(0 0 10px rgba(55,217,153,0.55));
+    transition:stroke-dashoffset .45s cubic-bezier(.3,.7,.3,1), stroke .3s ease;
+  }
+  .error .gauge-fill{ stroke:var(--danger); }
+
+  .reading{
+    position:absolute;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  .pace-value{
+    font-family:var(--font-display); font-weight:700;
+    font-size:clamp(48px, 16vw, 76px); line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .pace-unit{ font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); }
+  .pace-delta{
+    margin-top:4px; font-family:var(--font-display); font-size:13px; font-weight:600;
+    padding:3px 10px; border-radius:999px;
+    background:var(--panel); color:var(--text-dim);
+  }
+  .pace-delta.delta-fast{ background:var(--accent-soft); color:var(--accent); }
+  .pace-delta.delta-slow{ background:var(--danger-soft); color:var(--danger); }
+  .pace-delta.delta-target{ background:var(--warn-soft); color:var(--warn); }
+
+  .plan-status{
+    font-size:12.5px; color:var(--text-dim); text-align:center; min-height:16px;
+  }
+  .plan-status .hl{ color:var(--accent); font-weight:600; }
+
+  .stats{
+    width:100%; display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+  }
+  .stat{
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:14px;
+    padding:10px 8px; display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .stat-label{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); }
+  .stat-value{ font-family:var(--font-display); font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce){
+    .gauge-fill{ transition:none; }
+    .dot::after{ animation:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="status"><span class="dot"></span><span id="statusText">Pronto</span></div>
+      <button class="icon-btn" id="settingsToggle" type="button" aria-label="Impostazioni">⚙</button>
+    </div>
+
+    <section class="run-view" id="runView">
+      <div class="gauge-wrap">
+        <svg class="gauge" viewBox="0 0 300 300">
+          <circle class="gauge-track" cx="150" cy="150" r="130"></circle>
+          <circle class="gauge-fill" id="gaugeFill" cx="150" cy="150" r="130"></circle>
+        </svg>
+        <div class="reading">
+          <div class="pace-value" id="paceValue">--:--</div>
+          <div class="pace-unit">min/km</div>
+          <div class="pace-delta hidden" id="paceDelta"></div>
+        </div>
+      </div>
+
+      <div class="plan-status" id="planStatus"></div>
+
+      <div class="stats">
+        <div class="stat"><span class="stat-label">Precisione</span><span class="stat-value" id="accuracyValue">—</span></div>
+        <div class="stat"><span class="stat-label">Distanza</span><span class="stat-value" id="distValue">0.00 km</span></div>
+        <div class="stat"><span class="stat-label">Ritmo medio</span><span class="stat-value" id="avgValue">--:--</span></div>
+      </div>
+    </section>
+
+    <section class="setup-panel collapsed" id="settingsPanel">
+
+      <div class="setup-group">
+        <label class="switch-row">
+          <span>Ritmo obiettivo</span>
+          <input type="checkbox" id="targetEnabled">
+        </label>
+        <div class="target-inputs hidden" id="targetInputs">
+          <input type="number" id="targetMin" min="0" max="20" placeholder="min" value="6">
+          <span>:</span>
+          <input type="number" id="targetSec" min="0" max="59" placeholder="sec" value="30">
+          <span class="unit-tag">/km · tolleranza ±10s</span>
+        </div>
+      </div>
+
+      <div class="setup-group">
+        <label class="switch-row">
+          <span>Assistenza audio</span>
+          <input type="checkbox" id="audioEnabled">
+        </label>
+        <div class="audio-inputs hidden" id="audioInputs">
+          <span class="unit-tag">Ogni</span>
+          <input type="number" id="audioInterval" min="10" value="500">
+          <select id="audioTrigger">
+            <option value="distance">metri</option>
+            <option value="time">secondi</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="setup-group">
+        <label class="switch-row">
+          <span>Piano di allenamento</span>
+          <input type="checkbox" id="planEnabled">
+        </label>
+        <div class="plan-builder hidden" id="planBuilder">
+          <div id="planSteps"></div>
+          <div class="plan-actions">
+            <button class="ghost-btn" id="addStepBtn" type="button">+ Passo</button>
+            <button class="ghost-btn" id="addGroupBtn" type="button">+ Gruppo ripetuto</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="controls">
+      <button class="track-btn" id="trackBtn" type="button">Avvia corsa</button>
+      <p class="hint" id="hintText">Tocca per attivare il GPS. Funziona meglio all'aperto, lontano da edifici alti.</p>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ===================================================================
+  // TUNABLE CONSTANTS — safe to edit
+  // ===================================================================
+  const TOLERANCE_SEC = 10;      // seconds/km window counted as "on target"
+  const GAUGE_FAST_SEC = 270;    // 4:30/km -> gauge reads full
+  const GAUGE_SLOW_SEC = 510;    // 8:30/km -> gauge reads empty
+  const SPEED_SMOOTHING_ALPHA = 0.35;
+
+  // ---- DOM refs ----
+  const appEl = document.getElementById('app');
+  const statusText = document.getElementById('statusText');
+  const settingsToggle = document.getElementById('settingsToggle');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const runView = document.getElementById('runView');
+
+  const targetEnabled = document.getElementById('targetEnabled');
+  const targetInputs = document.getElementById('targetInputs');
+  const targetMin = document.getElementById('targetMin');
+  const targetSec = document.getElementById('targetSec');
+
+  const audioEnabledBox = document.getElementById('audioEnabled');
+  const audioInputs = document.getElementById('audioInputs');
+  const audioInterval = document.getElementById('audioInterval');
+  const audioTrigger = document.getElementById('audioTrigger');
+
+  const planEnabledBox = document.getElementById('planEnabled');
+  const planBuilder = document.getElementById('planBuilder');
+  const planSteps = document.getElementById('planSteps');
+  const addStepBtn = document.getElementById('addStepBtn');
+  const addGroupBtn = document.getElementById('addGroupBtn');
+
+  const trackBtn = document.getElementById('trackBtn');
+  const hintText = document.getElementById('hintText');
+
+  const gaugeFill = document.getElementById('gaugeFill');
+  const paceValue = document.getElementById('paceValue');
+  const paceDelta = document.getElementById('paceDelta');
+  const planStatus = document.getElementById('planStatus');
+  const accuracyValue = document.getElementById('accuracyValue');
+  const distValue = document.getElementById('distValue');
+  const avgValue = document.getElementById('avgValue');
+
+  const R = 130, CIRC = 2 * Math.PI * R;
+  gaugeFill.style.strokeDasharray = CIRC.toFixed(2);
+  gaugeFill.style.strokeDashoffset = CIRC.toFixed(2);
+
+  // ---- geo / run state ----
+  let watchId = null;
+  let tracking = false;
+  let lastPos = null;
+  let smoothedSpeedKmh = 0;
+  let currentPaceSec = null; // null = stationary/too slow to show a pace
+  let totalDistanceKm = 0;
+  let trackingStartTime = null;
+
+  // ---- audio cadence state ----
+  let lastAnnounceDistanceM = 0;
+  let lastAnnounceTimeMs = 0;
+  let lastAnnouncedTargetSec = null; // used to detect "first time this target is announced"
+
+  // ---- plan engine state ----
+  let planActive = false;
+  let planSegments = [];      // flattened list, built when the run starts
+  let planIndex = -1;
+  let planSegStartDistM = 0;
+  let planSegStartTime = 0;
+  let planTickTimer = null;
+
+  // ===================================================================
+  // Small formatting helpers
+  // ===================================================================
+  function haversineKm(lat1, lon1, lat2, lon2){
+    const toRad = d => d * Math.PI / 180;
+    const RE = 6371;
+    const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return 2 * RE * Math.asin(Math.sqrt(a));
+  }
+
+  function formatPace(sec){
+    if (sec == null || !isFinite(sec)) return '--:--';
+    const m = Math.floor(sec / 60);
+    const s = Math.round(sec % 60);
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  // Spoken form uses plain digits — the it-IT voice reads "5 e 30" as "cinque e trenta".
+  function paceSpeechPhrase(sec){
+    const m = Math.floor(sec / 60);
+    const s = Math.round(sec % 60);
+    return s === 0 ? `${m} esatti` : `${m} e ${s}`;
+  }
+
+  // ===================================================================
+  // AUDIO — this is the part to edit if you want different announcements.
+  // buildPeriodicMessage() is called on every "ogni tot metri/secondi" tick.
+  // buildTransitionMessage() is called whenever a workout-plan step changes.
+  // ===================================================================
+  function speak(text){
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'it-IT';
+    u.rate = 1.0;
+    window.speechSynthesis.speak(u);
+  }
+
+  function buildPeriodicMessage(paceSec, activeTargetSec){
+    const paceP = paceSpeechPhrase(paceSec);
+    if (activeTargetSec == null) return paceP; // no target -> always short
+
+    const isFirstForThisTarget = activeTargetSec !== lastAnnouncedTargetSec;
+    lastAnnouncedTargetSec = activeTargetSec;
+    if (!isFirstForThisTarget) return paceP; // short form after the first mention
+
+    const diff = Math.round(paceSec - activeTargetSec);
+    let diffPhrase;
+    if (Math.abs(diff) <= TOLERANCE_SEC) diffPhrase = 'in linea con l\'obiettivo';
+    else if (diff > 0) diffPhrase = `${diff} secondi più lento dell'obiettivo`;
+    else diffPhrase = `${Math.abs(diff)} secondi più veloce dell'obiettivo`;
+
+    return `${paceP}. Obiettivo ${paceSpeechPhrase(activeTargetSec)}, ${diffPhrase}`;
+  }
+
+  function buildTransitionMessage(seg){
+    const parts = [];
+    if (seg.repTotal && seg.stepIndexInRep === 0){
+      parts.push(seg.repIndex === seg.repTotal ? 'Ultima ripetuta.' : `Ripetuta ${seg.repIndex} di ${seg.repTotal}.`);
+    }
+    const amount = seg.durType === 'distance' ? `${seg.durValue} metri` : `${seg.durValue} secondi`;
+    if (seg.mode === 'rest'){
+      parts.push(`Recupero, ${amount}.`);
+    } else {
+      parts.push(`Via, ${amount}${seg.paceSec ? ` a ritmo ${paceSpeechPhrase(seg.paceSec)}` : ''}.`);
+    }
+    return parts.join(' ');
+  }
+
+  // ===================================================================
+  // Setup panel interactions
+  // ===================================================================
+  function bindToggle(checkbox, panel){
+    checkbox.addEventListener('change', () => panel.classList.toggle('hidden', !checkbox.checked));
+  }
+  bindToggle(targetEnabled, targetInputs);
+  bindToggle(audioEnabledBox, audioInputs);
+  bindToggle(planEnabledBox, planBuilder);
+
+  planEnabledBox.addEventListener('change', () => {
+    // A running plan carries its own per-segment target pace, so the
+    // standalone target field is disabled while a plan is in use.
+    targetEnabled.disabled = planEnabledBox.checked;
+    if (planEnabledBox.checked){
+      targetEnabled.checked = false;
+      targetInputs.classList.add('hidden');
+    }
+  });
+
+  settingsToggle.addEventListener('click', () => {
+    const collapsed = settingsPanel.classList.toggle('collapsed');
+    settingsToggle.classList.toggle('active', !collapsed);
+  });
+
+  // ---- plan builder DOM ----
+  function makeStepRow(){
+    const row = document.createElement('div');
+    row.className = 'plan-step';
+    row.innerHTML = `
+      <select class="step-mode">
+        <option value="run">Corsa</option>
+        <option value="rest">Recupero</option>
+      </select>
+      <input type="number" class="step-durvalue" min="1" value="200">
+      <select class="step-durtype">
+        <option value="distance">metri</option>
+        <option value="time">secondi</option>
+      </select>
+      <span class="step-pace-group">
+        <input type="number" class="step-pace-min" min="0" placeholder="min" value="5" style="width:48px">
+        <span>:</span>
+        <input type="number" class="step-pace-sec" min="0" max="59" placeholder="sec" value="0" style="width:48px">
+      </span>
+      <button class="step-remove" type="button" aria-label="Rimuovi">✕</button>
+    `;
+    return row;
+  }
+
+  function makeGroupBlock(){
+    const wrap = document.createElement('div');
+    wrap.className = 'plan-group';
+    wrap.innerHTML = `
+      <div class="group-header">
+        <span>Ripeti</span>
+        <input type="number" class="group-reps" min="1" value="5" style="width:52px">
+        <span>volte</span>
+        <button class="group-remove" type="button" aria-label="Rimuovi gruppo">✕</button>
+      </div>
+      <div class="group-steps"></div>
+      <button class="ghost-btn group-add-step" type="button">+ Passo nel gruppo</button>
+    `;
+    wrap.querySelector('.group-steps').appendChild(makeStepRow());
+    return wrap;
+  }
+
+  addStepBtn.addEventListener('click', () => planSteps.appendChild(makeStepRow()));
+  addGroupBtn.addEventListener('click', () => planSteps.appendChild(makeGroupBlock()));
+
+  // Event delegation: remove buttons, add-step-in-group, mode toggles
+  planSteps.addEventListener('click', (e) => {
+    if (e.target.classList.contains('step-remove')) e.target.closest('.plan-step').remove();
+    if (e.target.classList.contains('group-remove')) e.target.closest('.plan-group').remove();
+    if (e.target.classList.contains('group-add-step')){
+      e.target.closest('.plan-group').querySelector('.group-steps').appendChild(makeStepRow());
+    }
+  });
+  planSteps.addEventListener('change', (e) => {
+    if (e.target.classList.contains('step-mode')){
+      const paceGroup = e.target.closest('.plan-step').querySelector('.step-pace-group');
+      paceGroup.classList.toggle('hidden', e.target.value === 'rest');
+    }
+  });
+
+  function readStepRow(row){
+    const mode = row.querySelector('.step-mode').value;
+    const durType = row.querySelector('.step-durtype').value;
+    const durValue = parseFloat(row.querySelector('.step-durvalue').value) || 0;
+    let paceSec = null;
+    if (mode === 'run'){
+      const m = parseInt(row.querySelector('.step-pace-min').value, 10) || 0;
+      const s = parseInt(row.querySelector('.step-pace-sec').value, 10) || 0;
+      paceSec = m * 60 + s;
+    }
+    return { mode, durType, durValue, paceSec };
+  }
+
+  function buildPlanFromDOM(){
+    const items = [];
+    for (const child of planSteps.children){
+      if (child.classList.contains('plan-step')){
+        items.push({ kind: 'step', ...readStepRow(child) });
+      } else if (child.classList.contains('plan-group')){
+        const reps = parseInt(child.querySelector('.group-reps').value, 10) || 1;
+        const steps = Array.from(child.querySelectorAll('.group-steps .plan-step')).map(readStepRow);
+        items.push({ kind: 'group', reps, steps });
+      }
+    }
+    return items;
+  }
+
+  function flattenPlan(items){
+    const segs = [];
+    for (const item of items){
+      if (item.kind === 'step'){
+        segs.push({ ...item, repIndex: 0, repTotal: 0, stepIndexInRep: 0 });
+      } else {
+        for (let r = 1; r <= item.reps; r++){
+          item.steps.forEach((s, i) => {
+            segs.push({ ...s, repIndex: r, repTotal: item.reps, stepIndexInRep: i });
+          });
+        }
+      }
+    }
+    return segs;
+  }
+
+  // ===================================================================
+  // Plan engine
+  // ===================================================================
+  function startPlanSegment(index){
+    planIndex = index;
+    const seg = planSegments[index];
+    planSegStartDistM = totalDistanceKm * 1000;
+    planSegStartTime = Date.now();
+    speak(buildTransitionMessage(seg));
+    renderPlanStatus();
+  }
+
+  function renderPlanStatus(){
+    if (!planActive || planIndex < 0){ planStatus.textContent = ''; return; }
+    const seg = planSegments[planIndex];
+    const rep = seg.repTotal ? ` · Ripetuta <span class="hl">${seg.repIndex}/${seg.repTotal}</span>` : '';
+    const label = seg.mode === 'rest' ? 'Recupero' : 'Corsa';
+    const amount = seg.durType === 'distance' ? `${seg.durValue} m` : `${seg.durValue} s`;
+    planStatus.innerHTML = `Passo <span class="hl">${planIndex + 1}/${planSegments.length}</span> · ${label} ${amount}${rep}`;
+  }
+
+  function checkPlanProgress(){
+    if (!planActive || planIndex < 0) return;
+    const seg = planSegments[planIndex];
+    let done = false;
+    if (seg.durType === 'distance'){
+      done = (totalDistanceKm * 1000 - planSegStartDistM) >= seg.durValue;
+    } else {
+      done = (Date.now() - planSegStartTime) / 1000 >= seg.durValue;
+    }
+    if (done){
+      if (planIndex + 1 < planSegments.length){
+        startPlanSegment(planIndex + 1);
+      } else {
+        planActive = false;
+        speak('Piano completato!');
+        planStatus.textContent = 'Piano completato';
+      }
+    }
+  }
+
+  function activeTargetPaceSec(){
+    if (planActive && planIndex >= 0){
+      const seg = planSegments[planIndex];
+      return seg.mode === 'run' ? seg.paceSec : null;
+    }
+    return targetEnabled.checked ? (parseInt(targetMin.value,10)||0)*60 + (parseInt(targetSec.value,10)||0) : null;
+  }
+
+  // ===================================================================
+  // Rendering
+  // ===================================================================
+  function setStatus(msg, mode){
+    statusText.textContent = msg;
+    appEl.classList.remove('error');
+    if (mode === 'error') appEl.classList.add('error');
+  }
+
+  function render(){
+    paceValue.textContent = formatPace(currentPaceSec);
+
+    const pct = currentPaceSec == null ? 0 :
+      Math.min(Math.max((GAUGE_SLOW_SEC - currentPaceSec) / (GAUGE_SLOW_SEC - GAUGE_FAST_SEC), 0), 1);
+    gaugeFill.style.strokeDashoffset = (CIRC * (1 - pct)).toFixed(2);
+
+    const targetSecVal = activeTargetPaceSec();
+    if (targetSecVal != null && currentPaceSec != null){
+      const diff = Math.round(currentPaceSec - targetSecVal);
+      paceDelta.classList.remove('hidden');
+      paceDelta.classList.remove('delta-fast','delta-slow','delta-target');
+      if (Math.abs(diff) <= TOLERANCE_SEC){
+        paceDelta.textContent = 'In target';
+        paceDelta.classList.add('delta-target');
+      } else if (diff > 0){
+        paceDelta.textContent = `+${diff}s/km`;
+        paceDelta.classList.add('delta-slow');
+      } else {
+        paceDelta.textContent = `${diff}s/km`;
+        paceDelta.classList.add('delta-fast');
+      }
+    } else {
+      paceDelta.classList.add('hidden');
+    }
+
+    distValue.textContent = `${totalDistanceKm.toFixed(2)} km`;
+    if (trackingStartTime && totalDistanceKm > 0.05){
+      const elapsedSec = (Date.now() - trackingStartTime) / 1000;
+      avgValue.textContent = formatPace(elapsedSec / totalDistanceKm);
+    }
+  }
+
+  // ===================================================================
+  // Geolocation callbacks
+  // ===================================================================
+  function onPosition(pos){
+    const { latitude, longitude, speed, accuracy } = pos.coords;
+    const now = pos.timestamp;
+
+    setStatus('Segnale GPS attivo');
+    accuracyValue.textContent = (accuracy != null) ? `±${Math.round(accuracy)} m` : '—';
+
+    let speedKmh;
+    if (speed != null && !isNaN(speed) && speed >= 0){
+      speedKmh = speed * 3.6;
+    } else if (lastPos){
+      const distKm = haversineKm(lastPos.lat, lastPos.lon, latitude, longitude);
+      const dtH = (now - lastPos.time) / 1000 / 3600;
+      speedKmh = dtH > 0 ? distKm / dtH : 0;
+    } else {
+      speedKmh = 0;
+    }
+
+    smoothedSpeedKmh += SPEED_SMOOTHING_ALPHA * (speedKmh - smoothedSpeedKmh);
+    currentPaceSec = smoothedSpeedKmh > 0.6 ? 3600 / smoothedSpeedKmh : null;
+
+    const accOk = accuracy == null || accuracy <= 30;
+    if (lastPos && accOk){
+      totalDistanceKm += haversineKm(lastPos.lat, lastPos.lon, latitude, longitude);
+    }
+
+    lastPos = { lat: latitude, lon: longitude, time: now };
+    render();
+    maybeAnnouncePeriodic();
+  }
+
+  function maybeAnnouncePeriodic(){
+    if (!audioEnabledBox.checked || currentPaceSec == null) return;
+    const mode = audioTrigger.value;
+    const interval = parseFloat(audioInterval.value) || 0;
+    if (interval <= 0) return;
+
+    if (mode === 'distance'){
+      const distM = totalDistanceKm * 1000;
+      if (distM - lastAnnounceDistanceM >= interval){
+        lastAnnounceDistanceM = distM;
+        speak(buildPeriodicMessage(currentPaceSec, activeTargetPaceSec()));
+      }
+    } else {
+      const nowMs = Date.now();
+      if (nowMs - lastAnnounceTimeMs >= interval * 1000){
+        lastAnnounceTimeMs = nowMs;
+        speak(buildPeriodicMessage(currentPaceSec, activeTargetPaceSec()));
+      }
+    }
+  }
+
+  function onError(err){
+    stopTracking();
+    if (err.code === 1){
+      setStatus('Permesso negato', 'error');
+      hintText.textContent = "Hai bloccato l'accesso alla posizione. Abilita la localizzazione per questa pagina nelle impostazioni del browser e riprova.";
+    } else if (err.code === 3){
+      setStatus('Segnale non trovato', 'error');
+      hintText.textContent = 'Il GPS sta impiegando troppo tempo a rispondere. Esci allo scoperto e riprova.';
+    } else {
+      setStatus('Posizione non disponibile', 'error');
+      hintText.textContent = 'Non riesco a determinare la posizione. Verifica che la localizzazione sia attiva sul telefono.';
+    }
+  }
+
+  // ===================================================================
+  // Start / stop
+  // ===================================================================
+  function startTracking(){
+    if (!('geolocation' in navigator)){
+      setStatus('Non supportato', 'error');
+      hintText.textContent = 'Questo browser non espone le API di geolocalizzazione.';
+      return;
+    }
+
+    // reset run state
+    lastPos = null;
+    smoothedSpeedKmh = 0;
+    currentPaceSec = null;
+    totalDistanceKm = 0;
+    trackingStartTime = Date.now();
+    lastAnnounceDistanceM = 0;
+    lastAnnounceTimeMs = Date.now();
+    lastAnnouncedTargetSec = null;
+
+    if (planEnabledBox.checked){
+      planSegments = flattenPlan(buildPlanFromDOM());
+      planActive = planSegments.length > 0;
+      if (planActive){
+        startPlanSegment(0);
+        planTickTimer = setInterval(checkPlanProgress, 1000);
+      }
+    } else {
+      planActive = false;
+      planStatus.textContent = '';
+    }
+
+    trackBtn.disabled = true;
+    setStatus('Ricerca del segnale…');
+    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+      enableHighAccuracy: true, maximumAge: 0, timeout: 12000
+    });
+
+    tracking = true;
+    appEl.classList.add('tracking-mode');
+    appEl.classList.remove('error');
+    trackBtn.textContent = 'Termina corsa';
+    trackBtn.disabled = false;
+    hintText.textContent = '';
+    settingsPanel.classList.add('collapsed');
+  }
+
+  function stopTracking(){
+    if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    if (planTickTimer) clearInterval(planTickTimer);
+    watchId = null; planTickTimer = null;
+    tracking = false; planActive = false; planIndex = -1;
+    window.speechSynthesis && window.speechSynthesis.cancel();
+
+    appEl.classList.remove('tracking-mode', 'error');
+    setStatus('Pronto');
+    trackBtn.textContent = 'Avvia corsa';
+    hintText.textContent = "Tocca per attivare il GPS. Funziona meglio all'aperto, lontano da edifici alti.";
+    settingsPanel.classList.add('collapsed');
+    settingsToggle.classList.remove('active');
+  }
+
+  trackBtn.addEventListener('click', () => { tracking ? stopTracking() : startTracking(); });
+
+  if (!('geolocation' in navigator)){
+    trackBtn.disabled = true;
+    setStatus('Non supportato', 'error');
+    hintText.textContent = 'Questo browser non espone le API di geolocalizzazione.';
+  }
+})();
+</script>
+</body>
+</html>
