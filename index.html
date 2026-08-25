@@ -10,18 +10,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#090c0b;
-    --panel:rgba(255,255,255,0.035);
-    --panel-border:rgba(255,255,255,0.08);
-    --accent:#37D999;
-    --accent-soft:rgba(55,217,153,0.16);
-    --warn:#FFB454;
-    --warn-soft:rgba(255,180,84,0.16);
-    --danger:#FF6B6B;
-    --danger-soft:rgba(255,107,107,0.14);
-    --text:#EAF2EC;
-    --text-dim:#5E6F67;
-    --track:rgba(255,255,255,0.07);
+    --bg:#EFF2ED;
+    --panel:#FFFFFF;
+    --panel-border:rgba(15,30,20,0.10);
+    --accent:#1B9E70;
+    --accent-soft:rgba(27,158,112,0.14);
+    --warn:#B36B12;
+    --warn-soft:rgba(179,107,18,0.14);
+    --danger:#C94444;
+    --danger-soft:rgba(201,68,68,0.12);
+    --text:#16211B;
+    --text-dim:#63756A;
+    --track:rgba(15,30,20,0.10);
     --font-display:'JetBrains Mono', monospace;
     --font-ui:'Space Grotesk', sans-serif;
   }
@@ -47,7 +47,7 @@
     gap:16px;
     padding:20px 18px calc(28px + env(safe-area-inset-bottom));
     background:
-      radial-gradient(ellipse at 50% 30%, rgba(55,217,153,0.06), transparent 60%),
+      radial-gradient(ellipse at 50% 25%, rgba(27,158,112,0.07), transparent 60%),
       var(--bg);
   }
 
@@ -61,14 +61,15 @@
     justify-content:space-between;
   }
 
-  .status{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-size:12px;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
+  .status-block{ display:flex; flex-direction:column; gap:3px; }
+  .status-main{
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; letter-spacing:0.06em; text-transform:uppercase;
     color:var(--text-dim);
+  }
+  .status-accuracy{
+    font-family:var(--font-display); font-size:11px; color:var(--text-dim);
+    padding-left:16px;
   }
 
   .dot{
@@ -130,7 +131,7 @@
   .target-inputs.hidden, .audio-inputs.hidden, .plan-builder.hidden{ display:none; }
 
   input[type=number], select{
-    background:rgba(255,255,255,0.05);
+    background:rgba(15,30,20,0.04);
     border:1px solid var(--panel-border);
     border-radius:8px;
     padding:8px 9px;
@@ -170,7 +171,7 @@
 
   .plan-step{
     display:flex; flex-wrap:wrap; align-items:center; gap:6px;
-    background:rgba(255,255,255,0.03);
+    background:rgba(15,30,20,0.03);
     border:1px solid var(--panel-border);
     border-radius:10px;
     padding:8px;
@@ -187,7 +188,7 @@
     border:1px solid var(--panel-border);
     border-radius:12px;
     padding:10px;
-    background:rgba(255,255,255,0.02);
+    background:rgba(15,30,20,0.02);
   }
   .group-header{
     display:flex; align-items:center; gap:8px;
@@ -216,6 +217,11 @@
     background:var(--danger-soft);
     color:var(--danger);
   }
+  .track-btn.ghost-solid{
+    border-color:var(--panel-border);
+    background:var(--panel);
+    color:var(--text);
+  }
 
   .hint{
     margin:0; font-size:12.5px; line-height:1.4; text-align:center;
@@ -238,11 +244,11 @@
   .gauge-track{ fill:none; stroke:var(--track); stroke-width:10; }
   .gauge-fill{
     fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round;
-    filter:drop-shadow(0 0 10px rgba(55,217,153,0.55));
+    filter:drop-shadow(0 2px 6px rgba(27,158,112,0.35));
     transition:stroke-dashoffset .45s cubic-bezier(.3,.7,.3,1), stroke .3s ease;
   }
   .error .gauge-fill{ stroke:var(--danger); }
-  .paused .gauge-fill{ opacity:.45; }
+  .paused .gauge-fill{ opacity:.4; }
 
   .reading{
     position:absolute;
@@ -257,11 +263,11 @@
   .pace-delta{
     margin-top:4px; font-family:var(--font-display); font-size:13px; font-weight:600;
     padding:3px 10px; border-radius:999px;
-    background:var(--panel); color:var(--text-dim);
+    background:var(--panel); color:var(--text-dim); border:1px solid var(--panel-border);
   }
-  .pace-delta.delta-fast{ background:var(--accent-soft); color:var(--accent); }
-  .pace-delta.delta-slow{ background:var(--danger-soft); color:var(--danger); }
-  .pace-delta.delta-target{ background:var(--warn-soft); color:var(--warn); }
+  .pace-delta.delta-fast{ background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+  .pace-delta.delta-slow{ background:var(--danger-soft); color:var(--danger); border-color:transparent; }
+  .pace-delta.delta-target{ background:var(--warn-soft); color:var(--warn); border-color:transparent; }
 
   .plan-status{
     font-size:12.5px; color:var(--text-dim); text-align:center; min-height:16px;
@@ -280,14 +286,15 @@
 
   /* ---------- confirm modal ---------- */
   .modal-overlay{
-    position:fixed; inset:0; background:rgba(3,5,4,0.72);
+    position:fixed; inset:0; background:rgba(10,18,14,0.5);
     display:flex; align-items:center; justify-content:center;
     padding:24px; z-index:50;
   }
   .modal-overlay.hidden{ display:none; }
   .modal-card{
-    background:#0f1513; border:1px solid var(--panel-border); border-radius:18px;
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:18px;
     padding:20px; max-width:340px; width:100%;
+    box-shadow:0 10px 30px rgba(15,30,20,0.15);
   }
   .modal-text{ font-size:14px; line-height:1.5; margin:0 0 16px; }
   .modal-actions{ display:flex; gap:10px; }
@@ -308,11 +315,12 @@
 
   .history-detail{ display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--panel-border); }
   .history-detail.open{ display:block; }
-  .history-chart{ width:100%; height:80px; margin-bottom:10px; display:block; }
+  .history-chart{ width:100%; height:130px; margin-bottom:6px; display:block; touch-action:none; }
+  .chart-hint{ font-size:11px; color:var(--text-dim); text-align:center; margin:0 0 8px; }
   .history-section-label{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:10px 0 6px; }
   .split-row, .plan-row{
     display:flex; justify-content:space-between; font-size:13px; padding:5px 0;
-    border-bottom:1px solid rgba(255,255,255,0.05);
+    border-bottom:1px solid var(--panel-border);
   }
   .split-row:last-child, .plan-row:last-child{ border-bottom:none; }
 
@@ -325,7 +333,10 @@
 <body>
   <div class="app" id="app">
     <div class="topbar">
-      <div class="status"><span class="dot"></span><span id="statusText">Pronto</span></div>
+      <div class="status-block">
+        <div class="status-main"><span class="dot"></span><span id="statusText">Ricerca del segnale…</span></div>
+        <div class="status-accuracy" id="accuracyValue">—</div>
+      </div>
       <div class="topbar-actions">
         <button class="icon-btn" id="historyToggle" type="button" aria-label="Attività">🕘</button>
         <button class="icon-btn" id="settingsToggle" type="button" aria-label="Impostazioni">⚙</button>
@@ -349,8 +360,8 @@
         <div class="plan-status" id="planStatus"></div>
 
         <div class="stats">
-          <div class="stat"><span class="stat-label">Precisione</span><span class="stat-value" id="accuracyValue">—</span></div>
           <div class="stat"><span class="stat-label">Distanza</span><span class="stat-value" id="distValue">0.00 km</span></div>
+          <div class="stat"><span class="stat-label">Tempo</span><span class="stat-value" id="timeValue">0:00</span></div>
           <div class="stat"><span class="stat-label">Ritmo medio</span><span class="stat-value" id="avgValue">--:--</span></div>
         </div>
       </section>
@@ -406,7 +417,7 @@
           <button class="track-btn" id="pauseBtn" type="button">Pausa</button>
           <button class="track-btn end-btn" id="endBtn" type="button">Termina</button>
         </div>
-        <p class="hint" id="hintText">Tocca per attivare il GPS. Funziona meglio all'aperto, lontano da edifici alti.</p>
+        <p class="hint" id="hintText">Il GPS è già attivo in background: aspetta che la precisione sia buona, poi tocca Avvia.</p>
       </div>
     </div>
 
@@ -421,7 +432,7 @@
     <div class="modal-card">
       <p class="modal-text">Vuoi davvero concludere la corsa? Verrà salvata nelle tue attività.</p>
       <div class="modal-actions">
-        <button class="track-btn ghost-btn" id="confirmCancelBtn" type="button" style="border-style:solid">Annulla</button>
+        <button class="track-btn ghost-solid" id="confirmCancelBtn" type="button">Annulla</button>
         <button class="track-btn end-btn" id="confirmEndBtn" type="button">Concludi e salva</button>
       </div>
     </div>
@@ -434,18 +445,22 @@
   // ===================================================================
   // TUNABLE CONSTANTS — safe to edit
   // ===================================================================
-  const TOLERANCE_SEC = 10;      // seconds/km window counted as "on target"
-  const GAUGE_FAST_SEC = 270;    // 4:30/km -> gauge reads full
-  const GAUGE_SLOW_SEC = 510;    // 8:30/km -> gauge reads empty
-  const MAX_PACE_SEC = 720;      // 12:00/km -> beyond this, show --:-- instead of a number
-  const SPEED_SMOOTHING_ALPHA = 0.35;
+  const TOLERANCE_SEC = 10;        // seconds/km window counted as "on target"
+  const GAUGE_FAST_SEC = 270;      // 4:30/km -> gauge reads full
+  const GAUGE_SLOW_SEC = 510;      // 8:30/km -> gauge reads empty
+  const MAX_PACE_SEC = 1200;       // 20:00/km -> beyond this, show --:-- (includes walking)
+  const SPEED_SMOOTHING_ALPHA = 0.45;       // baseline smoothing factor
+  const SPEED_SMOOTHING_ALPHA_FAST = 0.75;  // used when a real pace change is detected
+  const SPEED_CHANGE_THRESHOLD_KMH = 1.2;   // delta beyond which we treat it as a real change, not GPS jitter
   const MIN_SAVE_DISTANCE_KM = 0.03; // don't save accidental taps with almost no distance
   const RUNS_STORAGE_KEY = 'ritmoCorsaRuns';
   const MAX_SAVED_RUNS = 100;
+  const DEFAULT_HINT = "Il GPS è già attivo in background: aspetta che la precisione sia buona, poi tocca Avvia.";
 
   // ---- DOM refs ----
   const appEl = document.getElementById('app');
   const statusText = document.getElementById('statusText');
+  const accuracyValue = document.getElementById('accuracyValue');
   const settingsToggle = document.getElementById('settingsToggle');
   const settingsPanel = document.getElementById('settingsPanel');
   const mainScreen = document.getElementById('mainScreen');
@@ -485,8 +500,8 @@
   const paceValue = document.getElementById('paceValue');
   const paceDelta = document.getElementById('paceDelta');
   const planStatus = document.getElementById('planStatus');
-  const accuracyValue = document.getElementById('accuracyValue');
   const distValue = document.getElementById('distValue');
+  const timeValue = document.getElementById('timeValue');
   const avgValue = document.getElementById('avgValue');
 
   const R = 130, CIRC = 2 * Math.PI * R;
@@ -494,29 +509,30 @@
   gaugeFill.style.strokeDashoffset = CIRC.toFixed(2);
 
   // ---- geo / run state ----
-  let watchId = null;
+  let gpsWatchId = null;      // single persistent watch, alive for the whole page lifetime
   let tracking = false;
   let paused = false;
+  let pausedIsAuto = false;   // true when the current pause was triggered automatically
   let lastPos = null;
   let smoothedSpeedKmh = 0;
-  let currentPaceSec = null; // null = stationary/too slow/uncertain to show a pace
+  let currentPaceSec = null; // null = stopped/too slow/uncertain -> shown as --:--
   let totalDistanceKm = 0;
   let trackingStartTime = null;
 
-  // ---- pause bookkeeping: pausedTotalMs is subtracted from any wall-clock
-  // duration so paused time never counts towards pace/duration/splits ----
+  // ---- pause bookkeeping: any wall-clock duration spent paused is excluded
+  // from pace/duration/split calculations ----
   let pausedTotalMs = 0;
   let pauseStartTime = 0;
-  let pausedAtStart = 0;      // snapshot of pausedTotalMs when the run started
+  let pausedAtStart = 0;
 
   // ---- audio cadence state ----
   let lastAnnounceDistanceM = 0;
   let lastAnnounceTimeMs = 0;
-  let lastAnnouncedTargetSec = null; // used to detect "first time this target is announced"
+  let lastAnnouncedTargetSec = null;
 
   // ---- plan engine state ----
   let planActive = false;
-  let planSegments = [];      // flattened list, built when the run starts
+  let planSegments = [];
   let planIndex = -1;
   let planSegStartDistM = 0;
   let planSegStartTime = 0;
@@ -530,6 +546,9 @@
   let lastKmCount = 0;
   let lastKmBoundaryTime = 0;
   let pausedAtLastKmBoundary = 0;
+
+  // ---- live clock, independent of GPS fix timing ----
+  let clockTimer = null;
 
   // ===================================================================
   // Small formatting helpers
@@ -550,7 +569,7 @@
   }
 
   function formatDuration(sec){
-    sec = Math.round(sec);
+    sec = Math.max(0, Math.round(sec));
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
     return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
   }
@@ -559,10 +578,13 @@
     return new Date(ts).toLocaleDateString('it-IT', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
   }
 
-  // active (non-paused) milliseconds elapsed since a reference timestamp,
+  // Active (non-paused) milliseconds elapsed since a reference timestamp,
   // given the pausedTotalMs snapshot taken when that reference was set.
+  // Also accounts for a pause that is still ongoing right now.
   function activeMsSince(refTime, pausedSnapshot){
-    return (Date.now() - refTime) - (pausedTotalMs - pausedSnapshot);
+    let effectivePaused = pausedTotalMs;
+    if (paused) effectivePaused += (Date.now() - pauseStartTime);
+    return (Date.now() - refTime) - (effectivePaused - pausedSnapshot);
   }
 
   // Spoken form uses plain digits — the it-IT voice reads "5 e 30" as "cinque e trenta".
@@ -588,11 +610,11 @@
 
   function buildPeriodicMessage(paceSec, activeTargetSec){
     const paceP = paceSpeechPhrase(paceSec);
-    if (activeTargetSec == null) return paceP; // no target -> always short
+    if (activeTargetSec == null) return paceP;
 
     const isFirstForThisTarget = activeTargetSec !== lastAnnouncedTargetSec;
     lastAnnouncedTargetSec = activeTargetSec;
-    if (!isFirstForThisTarget) return paceP; // short form after the first mention
+    if (!isFirstForThisTarget) return paceP;
 
     const diff = Math.round(paceSec - activeTargetSec);
     let diffPhrase;
@@ -628,8 +650,6 @@
   bindToggle(planEnabledBox, planBuilder);
 
   planEnabledBox.addEventListener('change', () => {
-    // A running plan carries its own per-segment target pace, so the
-    // standalone target field is disabled while a plan is in use.
     targetEnabled.disabled = planEnabledBox.checked;
     if (planEnabledBox.checked){
       targetEnabled.checked = false;
@@ -687,7 +707,6 @@
   addStepBtn.addEventListener('click', () => planSteps.appendChild(makeStepRow()));
   addGroupBtn.addEventListener('click', () => planSteps.appendChild(makeGroupBlock()));
 
-  // Event delegation: remove buttons, add-step-in-group, mode toggles
   planSteps.addEventListener('click', (e) => {
     if (e.target.classList.contains('step-remove')) e.target.closest('.plan-step').remove();
     if (e.target.classList.contains('group-remove')) e.target.closest('.plan-group').remove();
@@ -808,6 +827,33 @@
   }
 
   // ===================================================================
+  // Pause / resume (shared by the manual button and auto-pause detection)
+  // ===================================================================
+  function enterPaused(isAuto){
+    if (paused) return;
+    paused = true;
+    pausedIsAuto = isAuto;
+    pauseStartTime = Date.now();
+    if (planTickTimer){ clearInterval(planTickTimer); planTickTimer = null; }
+    appEl.classList.add('paused');
+    appEl.classList.remove('tracking');
+    pauseBtn.textContent = 'Riprendi';
+    setStatus(isAuto ? 'Pausa automatica' : 'In pausa');
+  }
+
+  function exitPaused(){
+    if (!paused) return;
+    pausedTotalMs += Date.now() - pauseStartTime;
+    paused = false;
+    pausedIsAuto = false;
+    appEl.classList.remove('paused');
+    appEl.classList.add('tracking');
+    pauseBtn.textContent = 'Pausa';
+    if (planActive) planTickTimer = setInterval(checkPlanProgress, 1000);
+    setStatus('Segnale GPS attivo');
+  }
+
+  // ===================================================================
   // Rendering
   // ===================================================================
   function setStatus(msg, mode){
@@ -843,21 +889,41 @@
     }
 
     distValue.textContent = `${totalDistanceKm.toFixed(2)} km`;
-    if (trackingStartTime && totalDistanceKm > 0.05){
-      const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
-      avgValue.textContent = formatPace(activeElapsedSec / totalDistanceKm);
-    }
+  }
+
+  function updateClock(){
+    if (!trackingStartTime) return;
+    const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
+    timeValue.textContent = formatDuration(activeElapsedSec);
+    if (totalDistanceKm > 0.05) avgValue.textContent = formatPace(activeElapsedSec / totalDistanceKm);
+  }
+
+  function resetDisplay(){
+    paceValue.textContent = '--:--';
+    gaugeFill.style.strokeDashoffset = CIRC.toFixed(2);
+    paceDelta.classList.add('hidden');
+    distValue.textContent = '0.00 km';
+    timeValue.textContent = '0:00';
+    avgValue.textContent = '--:--';
+    planStatus.textContent = '';
   }
 
   // ===================================================================
-  // Geolocation callbacks
+  // Geolocation — a single watch runs for the whole page lifetime so
+  // accuracy is already good by the time a run actually starts.
   // ===================================================================
   function onPosition(pos){
     const { latitude, longitude, speed, accuracy } = pos.coords;
     const now = pos.timestamp;
 
-    setStatus('Segnale GPS attivo');
     accuracyValue.textContent = (accuracy != null) ? `±${Math.round(accuracy)} m` : '—';
+    if (!paused) setStatus('Segnale GPS attivo');
+
+    if (!tracking){
+      // Not running yet: just keep the accuracy/status readout warm.
+      lastPos = { lat: latitude, lon: longitude, time: now };
+      return;
+    }
 
     let speedKmh;
     if (speed != null && !isNaN(speed) && speed >= 0){
@@ -870,29 +936,44 @@
       speedKmh = 0;
     }
 
-    smoothedSpeedKmh += SPEED_SMOOTHING_ALPHA * (speedKmh - smoothedSpeedKmh);
+    // Adaptive smoothing: damp ordinary GPS jitter, but snap quickly to
+    // genuine pace changes instead of lagging behind them.
+    const rawDelta = Math.abs(speedKmh - smoothedSpeedKmh);
+    const alpha = rawDelta > SPEED_CHANGE_THRESHOLD_KMH ? SPEED_SMOOTHING_ALPHA_FAST : SPEED_SMOOTHING_ALPHA;
+    smoothedSpeedKmh += alpha * (speedKmh - smoothedSpeedKmh);
+
     const rawPaceSec = smoothedSpeedKmh > 0.05 ? 3600 / smoothedSpeedKmh : Infinity;
-    currentPaceSec = rawPaceSec <= MAX_PACE_SEC ? rawPaceSec : null;
+    const instantPaceSec = rawPaceSec <= MAX_PACE_SEC ? rawPaceSec : null;
+
+    // ---- auto-pause / auto-resume ----
+    if (!paused && instantPaceSec == null){
+      enterPaused(true);
+    } else if (paused && pausedIsAuto && instantPaceSec != null){
+      exitPaused();
+    }
+
+    currentPaceSec = paused ? null : instantPaceSec;
 
     const accOk = accuracy == null || accuracy <= 30;
-    if (lastPos && accOk){
+    if (lastPos && accOk && !paused){
       totalDistanceKm += haversineKm(lastPos.lat, lastPos.lon, latitude, longitude);
     }
     lastPos = { lat: latitude, lon: longitude, time: now };
 
-    // ---- session logging for the saved activity record ----
-    const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
-    sessionPaceSamples.push({ t: activeElapsedSec, d: totalDistanceKm, p: currentPaceSec });
-    while (Math.floor(totalDistanceKm) > lastKmCount){
-      lastKmCount++;
-      const splitSec = activeMsSince(lastKmBoundaryTime, pausedAtLastKmBoundary) / 1000;
-      sessionKmSplits.push({ km: lastKmCount, paceSec: splitSec });
-      lastKmBoundaryTime = Date.now();
-      pausedAtLastKmBoundary = pausedTotalMs;
+    if (!paused){
+      const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
+      sessionPaceSamples.push({ t: activeElapsedSec, d: totalDistanceKm, p: currentPaceSec });
+      while (Math.floor(totalDistanceKm) > lastKmCount){
+        lastKmCount++;
+        const splitSec = activeMsSince(lastKmBoundaryTime, pausedAtLastKmBoundary) / 1000;
+        sessionKmSplits.push({ km: lastKmCount, paceSec: splitSec });
+        lastKmBoundaryTime = Date.now();
+        pausedAtLastKmBoundary = pausedTotalMs;
+      }
     }
 
     render();
-    maybeAnnouncePeriodic();
+    if (!paused) maybeAnnouncePeriodic();
   }
 
   function maybeAnnouncePeriodic(){
@@ -917,17 +998,23 @@
   }
 
   function onError(err){
-    resetToIdle();
     if (err.code === 1){
+      if (gpsWatchId != null){ navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+      if (tracking) resetToIdle();
       setStatus('Permesso negato', 'error');
       hintText.textContent = "Hai bloccato l'accesso alla posizione. Abilita la localizzazione per questa pagina nelle impostazioni del browser e riprova.";
-    } else if (err.code === 3){
-      setStatus('Segnale non trovato', 'error');
-      hintText.textContent = 'Il GPS sta impiegando troppo tempo a rispondere. Esci allo scoperto e riprova.';
     } else {
-      setStatus('Posizione non disponibile', 'error');
-      hintText.textContent = 'Non riesco a determinare la posizione. Verifica che la localizzazione sia attiva sul telefono.';
+      // Transient (timeout / position unavailable): the watch keeps trying
+      // on its own, so we just show it without interrupting a run in progress.
+      setStatus(err.code === 3 ? 'Segnale debole…' : 'Ricerca del segnale…');
     }
+  }
+
+  function startGpsWarmup(){
+    if (!('geolocation' in navigator)) return;
+    gpsWatchId = navigator.geolocation.watchPosition(onPosition, onError, {
+      enableHighAccuracy: true, maximumAge: 0, timeout: 12000
+    });
   }
 
   // ===================================================================
@@ -946,28 +1033,80 @@
     catch(e){ /* storage unavailable or full — the run just won't persist */ }
   }
 
-  function buildPaceChartSvg(samples){
-    const valid = samples.filter(s => s.p != null);
-    if (valid.length < 2){
-      return '<text x="10" y="45" fill="#5E6F67" font-size="11">Dati insufficienti per il grafico</text>';
+  // ---- pace-vs-distance chart: whole-km gridlines on X, 30s-step pace
+  // gridlines on Y, plus a touch/drag scrubber that reads out each sample ----
+  function computePaceAxis(pMinRaw, pMaxRaw){
+    let step = 30;
+    let lo = Math.floor(pMinRaw / step) * step;
+    let hi = Math.ceil(pMaxRaw / step) * step;
+    if (hi === lo) hi = lo + step;
+    if ((hi - lo) / step > 10){
+      step = 60;
+      lo = Math.floor(pMinRaw / step) * step;
+      hi = Math.ceil(pMaxRaw / step) * step;
+      if (hi === lo) hi = lo + step;
     }
-    const paces = valid.map(s => s.p);
-    const pMin = Math.min(...paces), pMax = Math.max(...paces);
-    const dMax = valid[valid.length - 1].d || 1;
-    const pts = valid.map(s => {
-      const x = (s.d / dMax) * 400;
-      const y = pMax === pMin ? 40 : 8 + ((s.p - pMin) / (pMax - pMin)) * 64;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    return `
-      <polyline points="${pts}" fill="none" stroke="#37D999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="4" y="14" fill="#5E6F67" font-size="10">${formatPace(pMin)} veloce</text>
-      <text x="4" y="78" fill="#5E6F67" font-size="10">${formatPace(pMax)} lento</text>
-    `;
+    const ticks = [];
+    for (let t = lo; t <= hi; t += step) ticks.push(t);
+    return { lo, hi, step, ticks };
   }
 
+  function computeKmTicks(dMax){
+    const ticks = [0];
+    for (let k = 1; k <= Math.floor(dMax); k++) ticks.push(k);
+    if (dMax - Math.floor(dMax) > 0.08 && dMax > (ticks[ticks.length-1] + 0.08)){
+      ticks.push(Number(dMax.toFixed(2)));
+    }
+    return ticks;
+  }
+
+  const CHART_M_LEFT = 34, CHART_M_TOP = 10, CHART_PLOT_W = 358, CHART_PLOT_H = 100;
+
   function buildRunDetailHtml(run){
-    let html = `<svg class="history-chart" viewBox="0 0 400 84" preserveAspectRatio="none">${buildPaceChartSvg(run.paceSamples)}</svg>`;
+    const valid = run.paceSamples.filter(s => s.p != null);
+    let chartSvg;
+    if (valid.length < 2){
+      chartSvg = `<svg class="history-chart" viewBox="0 0 400 130"><text x="10" y="60" fill="#63756A" font-size="11">Dati insufficienti per il grafico</text></svg>`;
+      run.__axis = null; run.__dMax = null;
+    } else {
+      const paces = valid.map(s => s.p);
+      const dMax = valid[valid.length - 1].d || 1;
+      const axis = computePaceAxis(Math.min(...paces), Math.max(...paces));
+      const kmTicks = computeKmTicks(dMax);
+      run.__axis = axis; run.__dMax = dMax;
+
+      const x = d => CHART_M_LEFT + (d / dMax) * CHART_PLOT_W;
+      const y = p => CHART_M_TOP + ((p - axis.lo) / (axis.hi - axis.lo)) * CHART_PLOT_H;
+
+      const yLines = axis.ticks.map(t => `
+        <line x1="${CHART_M_LEFT}" y1="${y(t)}" x2="${CHART_M_LEFT+CHART_PLOT_W}" y2="${y(t)}" stroke="rgba(15,30,20,0.10)" stroke-width="1"/>
+        <text x="2" y="${y(t)+3.5}" font-size="9.5" fill="#63756A">${formatPace(t)}</text>
+      `).join('');
+      const xLines = kmTicks.map(k => `
+        <line x1="${x(k)}" y1="${CHART_M_TOP}" x2="${x(k)}" y2="${CHART_M_TOP+CHART_PLOT_H}" stroke="rgba(15,30,20,0.08)" stroke-width="1"/>
+        <text x="${x(k)}" y="${CHART_M_TOP+CHART_PLOT_H+14}" font-size="9.5" fill="#63756A" text-anchor="middle">${k}</text>
+      `).join('');
+      const pts = valid.map(s => `${x(s.d).toFixed(1)},${y(s.p).toFixed(1)}`).join(' ');
+
+      chartSvg = `
+        <svg class="history-chart" viewBox="0 0 400 130" preserveAspectRatio="none">
+          ${yLines}
+          ${xLines}
+          <text x="${CHART_M_LEFT+CHART_PLOT_W}" y="${CHART_M_TOP+CHART_PLOT_H+14}" font-size="9" fill="#63756A" text-anchor="end">km</text>
+          <polyline points="${pts}" fill="none" stroke="#1B9E70" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect class="chart-overlay" x="${CHART_M_LEFT}" y="${CHART_M_TOP}" width="${CHART_PLOT_W}" height="${CHART_PLOT_H}" fill="#000" opacity="0" pointer-events="all"/>
+          <g class="chart-cursor" style="display:none">
+            <line class="chart-cursor-line" x1="0" y1="${CHART_M_TOP}" x2="0" y2="${CHART_M_TOP+CHART_PLOT_H}" stroke="#16211B" stroke-width="1" stroke-dasharray="2,2"/>
+            <circle class="chart-cursor-dot" r="4" fill="#1B9E70" stroke="#fff" stroke-width="1.5"/>
+            <rect class="chart-cursor-label-bg" width="76" height="18" rx="4" fill="#16211B"/>
+            <text class="chart-cursor-label-text" font-size="10" fill="#fff" text-anchor="middle"></text>
+          </g>
+        </svg>
+        <p class="chart-hint">Tieni premuto e scorri per vedere il ritmo punto per punto</p>
+      `;
+    }
+
+    let html = chartSvg;
 
     if (run.kmSplits && run.kmSplits.length){
       html += '<div class="history-section-label">Ritmo per km</div>';
@@ -989,6 +1128,64 @@
       });
     }
     return html;
+  }
+
+  function wireChartInteraction(container, run){
+    if (!run.__axis) return;
+    const svg = container.querySelector('.history-chart');
+    const overlay = container.querySelector('.chart-overlay');
+    if (!svg || !overlay) return;
+    const cursor = container.querySelector('.chart-cursor');
+    const cLine = container.querySelector('.chart-cursor-line');
+    const cDot = container.querySelector('.chart-cursor-dot');
+    const cLabelBg = container.querySelector('.chart-cursor-label-bg');
+    const cLabelText = container.querySelector('.chart-cursor-label-text');
+    const valid = run.paceSamples.filter(s => s.p != null);
+    const { lo, hi } = run.__axis;
+    const dMax = run.__dMax;
+
+    const xOf = d => CHART_M_LEFT + (d / dMax) * CHART_PLOT_W;
+    const yOf = p => CHART_M_TOP + ((p - lo) / (hi - lo)) * CHART_PLOT_H;
+
+    function nearestSample(d){
+      let best = valid[0], bestDiff = Math.abs(valid[0].d - d);
+      for (let i = 1; i < valid.length; i++){
+        const diff = Math.abs(valid[i].d - d);
+        if (diff < bestDiff){ best = valid[i]; bestDiff = diff; }
+      }
+      return best;
+    }
+
+    function updateAt(clientX){
+      const rect = svg.getBoundingClientRect();
+      let svgX = ((clientX - rect.left) / rect.width) * 400;
+      svgX = Math.min(Math.max(svgX, CHART_M_LEFT), CHART_M_LEFT + CHART_PLOT_W);
+      const d = ((svgX - CHART_M_LEFT) / CHART_PLOT_W) * dMax;
+      const s = nearestSample(d);
+      const px = xOf(s.d), py = yOf(s.p);
+
+      cLine.setAttribute('x1', px); cLine.setAttribute('x2', px);
+      cDot.setAttribute('cx', px); cDot.setAttribute('cy', py);
+
+      let labelX = px - 38;
+      labelX = Math.min(Math.max(labelX, CHART_M_LEFT), CHART_M_LEFT + CHART_PLOT_W - 76);
+      const labelY = Math.max(py - 26, 2);
+      cLabelBg.setAttribute('x', labelX); cLabelBg.setAttribute('y', labelY);
+      cLabelText.setAttribute('x', labelX + 38); cLabelText.setAttribute('y', labelY + 13);
+      cLabelText.textContent = `${formatPace(s.p)} · ${s.d.toFixed(2)}km`;
+      cursor.style.display = '';
+    }
+
+    overlay.addEventListener('pointerdown', (e) => {
+      overlay.setPointerCapture(e.pointerId);
+      updateAt(e.clientX);
+    });
+    overlay.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse' && e.buttons === 0) return;
+      updateAt(e.clientX);
+    });
+    overlay.addEventListener('pointerup', () => { cursor.style.display = 'none'; });
+    overlay.addEventListener('pointercancel', () => { cursor.style.display = 'none'; });
   }
 
   function renderHistoryList(){
@@ -1014,6 +1211,7 @@
         if (nowOpen && !detail.dataset.built){
           detail.innerHTML = buildRunDetailHtml(run);
           detail.dataset.built = '1';
+          wireChartInteraction(detail, run);
         }
       });
       historyList.appendChild(item);
@@ -1036,7 +1234,7 @@
   });
 
   // ===================================================================
-  // Start / pause / resume / end
+  // Start / end (pause/resume are handled by enterPaused/exitPaused above)
   // ===================================================================
   function startTracking(){
     if (!('geolocation' in navigator)){
@@ -1044,8 +1242,8 @@
       hintText.textContent = 'Questo browser non espone le API di geolocalizzazione.';
       return;
     }
+    if (gpsWatchId == null) startGpsWarmup();
 
-    // reset run state
     lastPos = null;
     smoothedSpeedKmh = 0;
     currentPaceSec = null;
@@ -1054,6 +1252,7 @@
     pausedTotalMs = 0;
     pausedAtStart = 0;
     paused = false;
+    pausedIsAuto = false;
     lastAnnounceDistanceM = 0;
     lastAnnounceTimeMs = Date.now();
     lastAnnouncedTargetSec = null;
@@ -1077,13 +1276,9 @@
       planStatus.textContent = '';
     }
 
-    setStatus('Ricerca del segnale…');
-    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
-      enableHighAccuracy: true, maximumAge: 0, timeout: 12000
-    });
-
+    resetDisplay();
     tracking = true;
-    appEl.classList.add('tracking-mode', 'tracking');
+    appEl.classList.add('tracking');
     appEl.classList.remove('error');
     hintText.textContent = '';
     settingsPanel.classList.add('collapsed');
@@ -1091,56 +1286,30 @@
     startBtn.classList.add('hidden');
     runControls.classList.remove('hidden');
     pauseBtn.textContent = 'Pausa';
-  }
 
-  function pauseTracking(){
-    if (!tracking || paused) return;
-    if (watchId != null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
-    if (planTickTimer){ clearInterval(planTickTimer); planTickTimer = null; }
-    paused = true;
-    pauseStartTime = Date.now();
-    appEl.classList.add('paused');
-    appEl.classList.remove('tracking');
-    setStatus('In pausa');
-    pauseBtn.textContent = 'Riprendi';
-  }
-
-  function resumeTracking(){
-    if (!tracking || !paused) return;
-    pausedTotalMs += Date.now() - pauseStartTime;
-    paused = false;
-    lastPos = null; // avoid a bogus jump computed from stale coordinates/time
-    appEl.classList.remove('paused');
-    appEl.classList.add('tracking');
-    setStatus('Ricerca del segnale…');
-    pauseBtn.textContent = 'Pausa';
-    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
-      enableHighAccuracy: true, maximumAge: 0, timeout: 12000
-    });
-    if (planActive) planTickTimer = setInterval(checkPlanProgress, 1000);
+    clockTimer = setInterval(updateClock, 1000);
+    updateClock();
   }
 
   function resetToIdle(){
-    if (watchId != null) navigator.geolocation.clearWatch(watchId);
     if (planTickTimer) clearInterval(planTickTimer);
-    watchId = null; planTickTimer = null;
-    tracking = false; paused = false; planActive = false; planIndex = -1;
+    if (clockTimer) clearInterval(clockTimer);
+    planTickTimer = null; clockTimer = null;
+    tracking = false; paused = false; pausedIsAuto = false;
+    planActive = false; planIndex = -1;
     window.speechSynthesis && window.speechSynthesis.cancel();
 
-    appEl.classList.remove('tracking-mode', 'tracking', 'paused', 'error');
-    setStatus('Pronto');
-    hintText.textContent = "Tocca per attivare il GPS. Funziona meglio all'aperto, lontano da edifici alti.";
+    appEl.classList.remove('tracking', 'paused', 'error');
+    setStatus('Segnale GPS attivo');
+    hintText.textContent = DEFAULT_HINT;
     settingsPanel.classList.add('collapsed');
     settingsToggle.classList.remove('active');
     startBtn.classList.remove('hidden');
     runControls.classList.add('hidden');
-    planStatus.textContent = '';
+    resetDisplay();
   }
 
   function finalizeAndSave(){
-    if (watchId != null) navigator.geolocation.clearWatch(watchId);
-    if (planTickTimer) clearInterval(planTickTimer);
-
     if (totalDistanceKm >= MIN_SAVE_DISTANCE_KM){
       const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
       saveRun({
@@ -1158,7 +1327,7 @@
   }
 
   startBtn.addEventListener('click', startTracking);
-  pauseBtn.addEventListener('click', () => { paused ? resumeTracking() : pauseTracking(); });
+  pauseBtn.addEventListener('click', () => { paused ? exitPaused() : enterPaused(false); });
   endBtn.addEventListener('click', () => confirmModal.classList.remove('hidden'));
   confirmCancelBtn.addEventListener('click', () => confirmModal.classList.add('hidden'));
   confirmEndBtn.addEventListener('click', () => {
@@ -1170,6 +1339,8 @@
     startBtn.disabled = true;
     setStatus('Non supportato', 'error');
     hintText.textContent = 'Questo browser non espone le API di geolocalizzazione.';
+  } else {
+    startGpsWarmup();
   }
 })();
 </script>
