@@ -4,10 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Mik Run App">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#1B9E70">
 <title>Mik Run App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
   :root{
     --bg:#EFF2ED;
@@ -285,6 +290,10 @@
   .stat-label{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); }
   .stat-value{ font-family:var(--font-display); font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; }
 
+  .map-wrap{ width:100%; }
+  .live-map{ width:100%; height:160px; border-radius:16px; overflow:hidden; border:1px solid var(--panel-border); }
+  .history-map{ width:100%; height:160px; border-radius:14px; overflow:hidden; border:1px solid var(--panel-border); margin-bottom:10px; }
+
   /* ---------- confirm modal ---------- */
   .modal-overlay{
     position:fixed; inset:0; background:rgba(10,18,14,0.5);
@@ -365,13 +374,17 @@
           <div class="stat"><span class="stat-label">Tempo</span><span class="stat-value" id="timeValue">0:00</span></div>
           <div class="stat"><span class="stat-label">Ritmo medio</span><span class="stat-value" id="avgValue">--:--</span></div>
         </div>
+
+        <div class="map-wrap hidden" id="liveMapWrap">
+          <div class="live-map" id="liveMap"></div>
+        </div>
       </section>
 
       <section class="setup-panel collapsed" id="settingsPanel">
 
         <div class="setup-group">
           <label class="switch-row">
-            <span>Ritmo obiettivo</span>
+            <span>Obiettivo ritmo</span>
             <input type="checkbox" id="targetEnabled">
           </label>
           <div class="target-inputs hidden" id="targetInputs">
@@ -384,7 +397,7 @@
 
         <div class="setup-group">
           <label class="switch-row">
-            <span>Assistenza audio</span>
+            <span>Aggiornamenti periodici</span>
             <input type="checkbox" id="audioEnabled">
           </label>
           <div class="audio-inputs hidden" id="audioInputs">
@@ -439,6 +452,7 @@
     </div>
   </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 (function(){
   "use strict";
@@ -450,10 +464,12 @@
   const GAUGE_FAST_SEC = 270;      // 4:30/km -> gauge reads full
   const GAUGE_SLOW_SEC = 510;      // 8:30/km -> gauge reads empty
   const MAX_PACE_SEC = 1200;       // 20:00/km -> beyond this, show --:-- (includes walking)
-  const SPEED_SMOOTHING_ALPHA_MIN = 0.85;   // used when GPS accuracy is good — almost raw, reacts fast
-  const SPEED_SMOOTHING_ALPHA_MAX = 0.30;   // used only when GPS accuracy is genuinely poor
-  const ACCURACY_GOOD_M = 20;               // at/below this, trust the fix almost fully
+  const SPEED_SMOOTHING_ALPHA_BASE = 0.55;  // light baseline smoothing for normal, steady conditions
+  const SPEED_SMOOTHING_ALPHA_POOR = 0.25;  // extra damping only when GPS accuracy is genuinely poor
+  const SPEED_SMOOTHING_ALPHA_SNAP = 0.9;   // near-immediate response to a real pace change
+  const ACCURACY_GOOD_M = 20;               // at/below this, use the light baseline
   const ACCURACY_POOR_M = 35;               // at/above this, damp harder
+  const SPEED_CHANGE_SNAP_RATIO = 0.25;     // relative change vs current speed that counts as "real", not noise
   const IMPLAUSIBLE_SPEED_KMH = 35;         // faster than this for a runner -> treat the fix as a glitch and drop it
   const MIN_SAVE_DISTANCE_KM = 0.03; // don't save accidental taps with almost no distance
   const RUNS_STORAGE_KEY = 'ritmoCorsaRuns';
@@ -546,6 +562,11 @@
   let sessionPaceSamples = [];
   let sessionKmSplits = [];
   let sessionPlanLog = [];
+  let sessionRoutePoints = [];
+
+  // ---- live map (Leaflet) ----
+  const liveMapWrap = document.getElementById('liveMapWrap');
+  let liveMap = null, liveMapLine = null, liveMapMarker = null;
   let lastKmCount = 0;
   let lastKmBoundaryTime = 0;
   let pausedAtLastKmBoundary = 0;
@@ -564,14 +585,20 @@
     return 2 * RE * Math.asin(Math.sqrt(a));
   }
 
-  // How hard to smooth the speed reading, driven purely by GPS accuracy —
-  // clean fix -> almost no smoothing (reacts immediately to real pace changes);
-  // noisy fix -> more smoothing, only as much as that specific fix needs.
-  function speedSmoothingAlpha(accuracy){
-    if (accuracy == null || accuracy <= ACCURACY_GOOD_M) return SPEED_SMOOTHING_ALPHA_MIN;
-    if (accuracy >= ACCURACY_POOR_M) return SPEED_SMOOTHING_ALPHA_MAX;
-    const t = (accuracy - ACCURACY_GOOD_M) / (ACCURACY_POOR_M - ACCURACY_GOOD_M);
-    return SPEED_SMOOTHING_ALPHA_MIN + t * (SPEED_SMOOTHING_ALPHA_MAX - SPEED_SMOOTHING_ALPHA_MIN);
+  // How hard to smooth the speed reading. Baseline comes from GPS accuracy
+  // (clean fix -> light damping, noisy fix -> more), but a relative change
+  // large enough to be a genuine pace shift (not just jitter) always snaps
+  // through almost immediately, regardless of accuracy.
+  function speedSmoothingAlpha(accuracy, relDelta){
+    let alpha;
+    if (accuracy == null || accuracy <= ACCURACY_GOOD_M) alpha = SPEED_SMOOTHING_ALPHA_BASE;
+    else if (accuracy >= ACCURACY_POOR_M) alpha = SPEED_SMOOTHING_ALPHA_POOR;
+    else {
+      const t = (accuracy - ACCURACY_GOOD_M) / (ACCURACY_POOR_M - ACCURACY_GOOD_M);
+      alpha = SPEED_SMOOTHING_ALPHA_BASE + t * (SPEED_SMOOTHING_ALPHA_POOR - SPEED_SMOOTHING_ALPHA_BASE);
+    }
+    if (relDelta > SPEED_CHANGE_SNAP_RATIO) alpha = Math.max(alpha, SPEED_SMOOTHING_ALPHA_SNAP);
+    return alpha;
   }
 
   function formatPace(sec){
@@ -956,10 +983,13 @@
       return;
     }
 
-    // Minimal smoothing: only as much as the current fix's own accuracy
-    // calls for. A clean fix is taken almost as-is (reacts immediately to
-    // real pace changes); a noisy fix gets damped more.
-    const alpha = speedSmoothingAlpha(accuracy);
+    // Minimal smoothing: a light baseline for stability, damped further only
+    // if this fix's accuracy is genuinely poor, but bypassed almost entirely
+    // when the change looks like a real pace shift rather than jitter.
+    const relDelta = smoothedSpeedKmh > 0.3
+      ? Math.abs(speedKmh - smoothedSpeedKmh) / smoothedSpeedKmh
+      : 1;
+    const alpha = speedSmoothingAlpha(accuracy, relDelta);
     smoothedSpeedKmh += alpha * (speedKmh - smoothedSpeedKmh);
 
     const rawPaceSec = smoothedSpeedKmh > 0.05 ? 3600 / smoothedSpeedKmh : Infinity;
@@ -991,10 +1021,40 @@
         lastKmBoundaryTime = Date.now();
         pausedAtLastKmBoundary = pausedTotalMs;
       }
+
+      if (accOk){
+        sessionRoutePoints.push({ lat: latitude, lon: longitude });
+        updateLiveMap(latitude, longitude);
+      }
     }
 
     render();
     if (!paused) maybeAnnouncePeriodic();
+  }
+
+  // The map is a purely visual layer on top of GPS data we're already
+  // recording. It never blocks tracking: if Leaflet failed to load (e.g. no
+  // connection when the page opened) or tiles can't be fetched, the route is
+  // still saved and a map can be shown later whenever a connection is back.
+  function updateLiveMap(lat, lon){
+    if (typeof L === 'undefined') return;
+    if (!liveMap){
+      liveMap = L.map('liveMap', { zoomControl: false }).setView([lat, lon], 17);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(liveMap);
+      liveMapLine = L.polyline([[lat, lon]], { color: '#1B9E70', weight: 4 }).addTo(liveMap);
+      liveMapMarker = L.circleMarker([lat, lon], { radius: 6, weight: 2, color: '#fff', fillColor: '#1B9E70', fillOpacity: 1 }).addTo(liveMap);
+    } else {
+      liveMapLine.addLatLng([lat, lon]);
+      liveMapMarker.setLatLng([lat, lon]);
+      liveMap.panTo([lat, lon]);
+    }
+  }
+
+  function teardownLiveMap(){
+    if (liveMap){ liveMap.remove(); liveMap = null; liveMapLine = null; liveMapMarker = null; }
   }
 
   function maybeAnnouncePeriodic(){
@@ -1084,6 +1144,10 @@
   const CHART_M_LEFT = 34, CHART_M_TOP = 10, CHART_PLOT_W = 358, CHART_PLOT_H = 100;
 
   function buildRunDetailHtml(run){
+    let html = (run.routePoints && run.routePoints.length > 1)
+      ? '<div class="history-map"></div>'
+      : '';
+
     const valid = run.paceSamples.filter(s => s.p != null);
     let chartSvg;
     if (valid.length < 2){
@@ -1127,7 +1191,7 @@
       `;
     }
 
-    let html = chartSvg;
+    html += chartSvg;
 
     if (run.kmSplits && run.kmSplits.length){
       html += '<div class="history-section-label">Ritmo per km</div>';
@@ -1149,6 +1213,22 @@
       });
     }
     return html;
+  }
+
+  function wireHistoryMap(container, run){
+    if (typeof L === 'undefined' || !run.routePoints || run.routePoints.length < 2) return;
+    const mapEl = container.querySelector('.history-map');
+    if (!mapEl) return;
+    const map = L.map(mapEl, { zoomControl: false, scrollWheelZoom: false });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+    const latlngs = run.routePoints.map(p => [p.lat, p.lon]);
+    const line = L.polyline(latlngs, { color: '#1B9E70', weight: 4 }).addTo(map);
+    map.fitBounds(line.getBounds(), { padding: [16, 16] });
+    L.circleMarker(latlngs[0], { radius: 5, weight: 2, color: '#fff', fillColor: '#1B9E70', fillOpacity: 1 }).addTo(map);
+    L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, weight: 2, color: '#fff', fillColor: '#C94444', fillOpacity: 1 }).addTo(map);
   }
 
   function wireChartInteraction(container, run){
@@ -1232,6 +1312,7 @@
         if (nowOpen && !detail.dataset.built){
           detail.innerHTML = buildRunDetailHtml(run);
           detail.dataset.built = '1';
+          wireHistoryMap(detail, run);
           wireChartInteraction(detail, run);
         }
       });
@@ -1281,9 +1362,13 @@
     sessionPaceSamples = [];
     sessionKmSplits = [];
     sessionPlanLog = [];
+    sessionRoutePoints = [];
     lastKmCount = 0;
     lastKmBoundaryTime = trackingStartTime;
     pausedAtLastKmBoundary = 0;
+
+    teardownLiveMap();
+    liveMapWrap.classList.remove('hidden');
 
     if (planEnabledBox.checked){
       planSegments = flattenPlan(buildPlanFromDOM());
@@ -1327,6 +1412,8 @@
     settingsToggle.classList.remove('active');
     startBtn.classList.remove('hidden');
     runControls.classList.add('hidden');
+    teardownLiveMap();
+    liveMapWrap.classList.add('hidden');
     resetDisplay();
   }
 
@@ -1341,7 +1428,8 @@
         avgPaceSec: totalDistanceKm > 0 ? activeElapsedSec / totalDistanceKm : null,
         paceSamples: sessionPaceSamples,
         kmSplits: sessionKmSplits,
-        planLog: sessionPlanLog.length ? sessionPlanLog : null
+        planLog: sessionPlanLog.length ? sessionPlanLog : null,
+        routePoints: sessionRoutePoints.length > 1 ? sessionRoutePoints : null
       });
     }
     resetToIdle();
@@ -1364,6 +1452,13 @@
     startGpsWarmup();
   }
 })();
+
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* offline caching just won't be available */ });
+  });
+}
+
 </script>
 </body>
 </html>
