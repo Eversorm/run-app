@@ -161,9 +161,10 @@
 
   .unit-tag{ font-size:13px; color:var(--text-dim); }
 
-  .plan-toggle-row{ width:100%; max-width:440px; }
+  .plan-toggle-row{ width:100%; max-width:440px; display:flex; gap:8px; }
+  .plan-toggle-row .track-btn{ width:auto; flex:1; }
   .track-btn.ghost-solid.active{
-    border-color:var(--accent); color:var(--accent); background:var(--accent-soft);
+    border-color:var(--warn); color:var(--warn); background:var(--warn-soft);
   }
 
   .plan-builder-home{
@@ -194,6 +195,9 @@
     cursor:pointer;
   }
   .ghost-btn:active{ border-color:var(--accent); color:var(--accent); }
+  .ghost-btn.active{
+    border-style:solid; border-color:var(--warn); color:var(--warn); background:var(--warn-soft);
+  }
 
   .plan-step{
     display:flex; flex-wrap:wrap; align-items:center; gap:6px;
@@ -329,7 +333,7 @@
   .modal-overlay{
     position:fixed; inset:0; background:rgba(10,18,14,0.5);
     display:flex; align-items:center; justify-content:center;
-    padding:24px; z-index:50;
+    padding:24px; z-index:5000;
   }
   .modal-overlay.hidden{ display:none; }
   .modal-card{
@@ -421,19 +425,6 @@
 
         <div class="setup-group">
           <label class="switch-row">
-            <span>Obiettivo ritmo</span>
-            <input type="checkbox" id="targetEnabled">
-          </label>
-          <div class="target-inputs hidden" id="targetInputs">
-            <input type="number" id="targetMin" min="0" max="20" placeholder="min" value="6">
-            <span>:</span>
-            <input type="number" id="targetSec" min="0" max="59" placeholder="sec" value="30">
-            <span class="unit-tag">/km · tolleranza ±10s</span>
-          </div>
-        </div>
-
-        <div class="setup-group">
-          <label class="switch-row">
             <span>Aggiornamenti periodici</span>
             <input type="checkbox" id="audioEnabled">
           </label>
@@ -455,13 +446,38 @@
           <button class="track-btn end-btn" id="endBtn" type="button">Termina</button>
         </div>
         <div class="plan-toggle-row">
-          <button class="track-btn ghost-solid" id="planToggleBtn" type="button">📋 Piano di allenamento</button>
+          <button class="track-btn ghost-solid" id="planToggleBtn" type="button">📋 Piano</button>
+          <button class="track-btn ghost-solid" id="targetToggleBtn" type="button">🎯 Target</button>
         </div>
         <div class="plan-builder-home hidden" id="planBuilderHome">
           <div id="planSteps"></div>
           <div class="plan-actions">
             <button class="ghost-btn" id="addStepBtn" type="button">+ Passo</button>
             <button class="ghost-btn" id="addGroupBtn" type="button">+ Gruppo ripetuto</button>
+          </div>
+        </div>
+        <div class="plan-builder-home hidden" id="targetBuilderHome">
+          <div class="plan-actions">
+            <button class="ghost-btn target-goal-btn" id="targetDistBtn" type="button">Distanza</button>
+            <button class="ghost-btn target-goal-btn" id="targetTimeBtn" type="button">Tempo</button>
+          </div>
+          <div class="target-inputs hidden" id="targetDistWrap">
+            <input type="number" id="targetDistValue" min="1" value="5000">
+            <span class="unit-tag">metri</span>
+          </div>
+          <div class="target-inputs hidden" id="targetTimeWrap">
+            <input type="number" id="targetTimeValue" min="1" value="1800">
+            <span class="unit-tag">secondi</span>
+          </div>
+          <label class="switch-row">
+            <span>Ritmo</span>
+            <input type="checkbox" id="targetEnabled">
+          </label>
+          <div class="target-inputs hidden" id="targetInputs">
+            <input type="number" id="targetMin" min="0" max="20" placeholder="min" value="6">
+            <span>:</span>
+            <input type="number" id="targetSec" min="0" max="59" placeholder="sec" value="30">
+            <span class="unit-tag">/km · tolleranza ±10s</span>
           </div>
         </div>
         <p class="hint" id="hintText">Il GPS è già attivo in background: aspetta che la precisione sia buona, poi tocca Avvia.</p>
@@ -538,6 +554,15 @@
   const addStepBtn = document.getElementById('addStepBtn');
   const addGroupBtn = document.getElementById('addGroupBtn');
 
+  const targetToggleBtn = document.getElementById('targetToggleBtn');
+  const targetBuilderHome = document.getElementById('targetBuilderHome');
+  const targetDistBtn = document.getElementById('targetDistBtn');
+  const targetTimeBtn = document.getElementById('targetTimeBtn');
+  const targetDistWrap = document.getElementById('targetDistWrap');
+  const targetTimeWrap = document.getElementById('targetTimeWrap');
+  const targetDistValue = document.getElementById('targetDistValue');
+  const targetTimeValue = document.getElementById('targetTimeValue');
+
   const startBtn = document.getElementById('startBtn');
   const runControls = document.getElementById('runControls');
   const pauseBtn = document.getElementById('pauseBtn');
@@ -549,6 +574,13 @@
   const confirmCancelBtn = document.getElementById('confirmCancelBtn');
   const confirmEndBtn = document.getElementById('confirmEndBtn');
   let pendingConfirmAction = null; // callback fired by confirmEndBtn, set per use (end run / delete run)
+
+  function showConfirmModal(text, btnLabel, action){
+    confirmModalText.textContent = text;
+    confirmEndBtn.textContent = btnLabel;
+    pendingConfirmAction = action;
+    confirmModal.classList.remove('hidden');
+  }
 
   const gaugeFill = document.getElementById('gaugeFill');
   const paceValue = document.getElementById('paceValue');
@@ -592,6 +624,7 @@
   let planActive = false;
   let planSegments = [];
   let planIndex = -1;
+  let isTargetMode = false; // true when planSegments was built from the Target panel (single goal), not from actual plan steps
   let planSegStartDistM = 0;
   let planSegStartTime = 0;
   let pausedAtSegStart = 0;
@@ -668,7 +701,7 @@
       }
       return `${durValue} m`;
     }
-    return formatDuration(durValue);
+    return `${durValue} s`;
   }
 
   function formatDateIt(ts){
@@ -689,6 +722,24 @@
     const m = Math.floor(sec / 60);
     const s = Math.round(sec % 60);
     return s === 0 ? `${m} esatti` : `${m} e ${s}`;
+  }
+
+  // Spoken form of a duration, e.g. "12 minuti e 34 secondi" or "1 ora e 5 minuti".
+  function durationSpeechPhrase(sec){
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    const parts = [];
+    if (h > 0) parts.push(`${h} or${h === 1 ? 'a' : 'e'}`);
+    if (h > 0 || m > 0) parts.push(`${m} minut${m === 1 ? 'o' : 'i'}`);
+    if (h === 0) parts.push(`${s} second${s === 1 ? 'o' : 'i'}`);
+    return parts.join(' e ');
+  }
+
+  // Full spoken recap of a run: distance, duration and average pace.
+  function buildRunSummarySpeech(distanceKm, durationSec, avgPaceSec){
+    const distPhrase = distanceKm >= 1 ? `${distanceKm.toFixed(2)} chilometri` : `${Math.round(distanceKm * 1000)} metri`;
+    const pacePhrase = avgPaceSec != null && isFinite(avgPaceSec) ? `, ritmo medio ${paceSpeechPhrase(avgPaceSec)} al chilometro` : '';
+    return `Corsa completata. ${distPhrase} in ${durationSpeechPhrase(durationSec)}${pacePhrase}.`;
   }
 
   // ===================================================================
@@ -777,14 +828,38 @@
   bindToggle(targetEnabled, targetInputs);
   bindToggle(audioEnabledBox, audioInputs);
 
-  // The plan builder now lives on the home screen as its own toggle button
-  // (instead of a checkbox in Settings). A plan with at least one step
-  // always takes priority over the simple "Obiettivo ritmo" target — see
-  // activeTargetPaceSec() — so the two don't need to be mutually exclusive here.
+  // Piano and Target are alternative ways to run: opening one closes the
+  // other's panel. If a plan has at least one step it always takes priority
+  // at start time over a Target goal — see the branching in startTracking()
+  // and activeTargetPaceSec().
   planToggleBtn.addEventListener('click', () => {
     showMainScreen();
     const hidden = planBuilderHome.classList.toggle('hidden');
     planToggleBtn.classList.toggle('active', !hidden);
+    if (!hidden){ targetBuilderHome.classList.add('hidden'); targetToggleBtn.classList.remove('active'); }
+  });
+
+  targetToggleBtn.addEventListener('click', () => {
+    showMainScreen();
+    const hidden = targetBuilderHome.classList.toggle('hidden');
+    targetToggleBtn.classList.toggle('active', !hidden);
+    if (!hidden){ planBuilderHome.classList.add('hidden'); planToggleBtn.classList.remove('active'); }
+  });
+
+  // Distanza/Tempo are an exclusive either/or choice (tapping the active one
+  // clears the goal entirely); Ritmo is a separate checkbox that can combine
+  // with whichever of the two is picked, or stand alone with no completion.
+  function setTargetGoalMode(mode){ // mode: 'distance' | 'time' | null
+    targetDistBtn.classList.toggle('active', mode === 'distance');
+    targetTimeBtn.classList.toggle('active', mode === 'time');
+    targetDistWrap.classList.toggle('hidden', mode !== 'distance');
+    targetTimeWrap.classList.toggle('hidden', mode !== 'time');
+  }
+  targetDistBtn.addEventListener('click', () => {
+    setTargetGoalMode(targetDistBtn.classList.contains('active') ? null : 'distance');
+  });
+  targetTimeBtn.addEventListener('click', () => {
+    setTargetGoalMode(targetTimeBtn.classList.contains('active') ? null : 'time');
   });
 
   function planHasSteps(){
@@ -1021,8 +1096,15 @@
         startPlanSegment(planIndex + 1);
       } else {
         planActive = false;
-        speak('Piano completato!');
-        planStatus.textContent = 'Piano completato';
+        if (isTargetMode){
+          const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
+          const avgPaceSec = totalDistanceKm > 0 ? activeElapsedSec / totalDistanceKm : null;
+          speak(buildRunSummarySpeech(totalDistanceKm, activeElapsedSec, avgPaceSec));
+          planStatus.textContent = 'Target completato';
+        } else {
+          speak('Piano completato!');
+          planStatus.textContent = 'Piano completato';
+        }
       }
     }
   }
@@ -1420,7 +1502,7 @@
         const rep = seg.repTotal ? ` ↻${seg.repIndex}/${seg.repTotal}` : '';
         const amount = formatAmountShort(seg.durType, seg.durValue);
         if (seg.mode === 'rest'){
-          html += `<div class="plan-row"><span>Recupero (${amount})${rep}</span><span>${formatDuration(seg.actualDurationSec)}</span></div>`;
+          html += `<div class="plan-row"><span>Recupero (${amount})${rep}</span><span>${formatDuration(seg.actualDurationSec)} · ${formatPace(seg.achievedPaceSec)} /km</span></div>`;
         } else {
           const target = seg.paceSec ? ` ${formatPace(seg.paceSec)}` : '';
           html += `<div class="plan-row"><span>Corsa (${amount}${target})${rep}</span><span>${formatPace(seg.achievedPaceSec)}</span></div>`;
@@ -1536,9 +1618,7 @@
       });
       item.querySelector('.history-delete').addEventListener('click', (e) => {
         e.stopPropagation();
-        confirmModalText.textContent = 'Vuoi eliminare questa corsa? L\'operazione non è reversibile.';
-        pendingConfirmAction = () => { deleteRun(run.id); renderHistoryList(); };
-        confirmModal.classList.remove('hidden');
+        showConfirmModal('Vuoi eliminare questa corsa? L\'operazione non è reversibile.', 'Elimina definitivamente', () => { deleteRun(run.id); renderHistoryList(); });
       });
       historyList.appendChild(item);
     });
@@ -1593,20 +1673,31 @@
 
     teardownLiveMap();
     liveMapWrap.classList.remove('hidden');
+    resetDisplay();
 
     if (planHasSteps()){
       planSegments = flattenPlan(buildPlanFromDOM());
       planActive = planSegments.length > 0;
+      isTargetMode = false;
       if (planActive){
         startPlanSegment(0);
         planTickTimer = setInterval(checkPlanProgress, 1000);
       }
+    } else if (targetDistBtn.classList.contains('active') || targetTimeBtn.classList.contains('active')){
+      const durType = targetDistBtn.classList.contains('active') ? 'distance' : 'time';
+      const durValue = durType === 'distance' ? (parseFloat(targetDistValue.value) || 0) : (parseFloat(targetTimeValue.value) || 0);
+      const paceSec = targetEnabled.checked ? (parseInt(targetMin.value,10)||0)*60 + (parseInt(targetSec.value,10)||0) : null;
+      planSegments = [{ mode:'run', durType, durValue, paceSec, repIndex:0, repTotal:0, stepIndexInRep:0 }];
+      planActive = true;
+      isTargetMode = true;
+      startPlanSegment(0);
+      planTickTimer = setInterval(checkPlanProgress, 1000);
     } else {
       planActive = false;
+      isTargetMode = false;
       planStatus.innerHTML = '';
     }
 
-    resetDisplay();
     tracking = true;
     appEl.classList.add('tracking');
     appEl.classList.remove('error');
@@ -1615,6 +1706,8 @@
     settingsToggle.classList.remove('active');
     planBuilderHome.classList.add('hidden');
     planToggleBtn.classList.remove('active');
+    targetBuilderHome.classList.add('hidden');
+    targetToggleBtn.classList.remove('active');
     startBtn.classList.add('hidden');
     runControls.classList.remove('hidden');
     pauseBtn.textContent = 'Pausa';
@@ -1628,7 +1721,7 @@
     if (clockTimer) clearInterval(clockTimer);
     planTickTimer = null; clockTimer = null;
     tracking = false; paused = false; pausedIsAuto = false;
-    planActive = false; planIndex = -1;
+    planActive = false; planIndex = -1; isTargetMode = false;
     window.speechSynthesis && window.speechSynthesis.cancel();
 
     appEl.classList.remove('tracking', 'paused', 'error', 'plan-good', 'plan-bad');
@@ -1646,12 +1739,14 @@
   function finalizeAndSave(){
     if (totalDistanceKm >= MIN_SAVE_DISTANCE_KM){
       const activeElapsedSec = activeMsSince(trackingStartTime, pausedAtStart) / 1000;
+      const avgPaceSec = totalDistanceKm > 0 ? activeElapsedSec / totalDistanceKm : null;
+      speak(buildRunSummarySpeech(totalDistanceKm, activeElapsedSec, avgPaceSec));
       saveRun({
         id: Date.now(),
         startTime: trackingStartTime,
         durationSec: activeElapsedSec,
         distanceKm: totalDistanceKm,
-        avgPaceSec: totalDistanceKm > 0 ? activeElapsedSec / totalDistanceKm : null,
+        avgPaceSec,
         paceSamples: sessionPaceSamples,
         kmSplits: sessionKmSplits,
         planLog: sessionPlanLog.length ? sessionPlanLog : null,
@@ -1664,9 +1759,7 @@
   startBtn.addEventListener('click', startTracking);
   pauseBtn.addEventListener('click', () => { paused ? exitPaused() : enterPaused(false); });
   endBtn.addEventListener('click', () => {
-    confirmModalText.textContent = 'Vuoi davvero concludere la corsa? Verrà salvata nelle tue attività.';
-    pendingConfirmAction = finalizeAndSave;
-    confirmModal.classList.remove('hidden');
+    showConfirmModal('Vuoi davvero concludere la corsa? Verrà salvata nelle tue attività.', 'Concludi e salva', finalizeAndSave);
   });
   confirmCancelBtn.addEventListener('click', () => {
     confirmModal.classList.add('hidden');
