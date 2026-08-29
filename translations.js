@@ -7,7 +7,7 @@
 // translate every value, keep every key name identical, and add the
 // new key to SUPPORTED_LANGS below.
 // ===================================================================
-const SUPPORTED_LANGS = ['it', 'en', 'es'];
+const SUPPORTED_LANGS = ['it', 'en', 'es', 'de', 'nl'];
 const DEFAULT_LANG = 'it';
 
 const I18N = {
@@ -16,11 +16,13 @@ const I18N = {
   it: {
     locale: 'it-IT',
     speechLang: 'it-IT',
+    nativeName: 'Italiano',
 
     t: {
       historyAria: 'Attività',
       settingsAria: 'Impostazioni',
       langSwitchAria: 'Cambia lingua',
+      chooseLanguageTitle: 'Scegli la lingua',
 
       statusSearching: 'Ricerca del segnale…',
       statusWeak: 'Segnale debole…',
@@ -167,11 +169,13 @@ const I18N = {
   en: {
     locale: 'en-US',
     speechLang: 'en-US',
+    nativeName: 'English',
 
     t: {
       historyAria: 'Activity',
       settingsAria: 'Settings',
       langSwitchAria: 'Change language',
+      chooseLanguageTitle: 'Choose language',
 
       statusSearching: 'Searching for signal…',
       statusWeak: 'Weak signal…',
@@ -318,11 +322,13 @@ const I18N = {
   es: {
     locale: 'es-ES',
     speechLang: 'es-ES',
+    nativeName: 'Español',
 
     t: {
       historyAria: 'Actividad',
       settingsAria: 'Ajustes',
       langSwitchAria: 'Cambiar idioma',
+      chooseLanguageTitle: 'Elegir idioma',
 
       statusSearching: 'Buscando señal…',
       statusWeak: 'Señal débil…',
@@ -461,6 +467,312 @@ const I18N = {
       runSummary(distancePhraseVal, durationPhraseVal, pacePhraseOrNull){
         const paceClause = pacePhraseOrNull ? `, ritmo medio ${pacePhraseOrNull} por kilómetro` : '';
         return `Carrera completada. ${distancePhraseVal} en ${durationPhraseVal}${paceClause}.`;
+      }
+    }
+  },
+
+  // ============================== DEUTSCH ==============================
+  de: {
+    locale: 'de-DE',
+    speechLang: 'de-DE',
+    nativeName: 'Deutsch',
+
+    t: {
+      historyAria: 'Aktivität',
+      settingsAria: 'Einstellungen',
+      langSwitchAria: 'Sprache ändern',
+      chooseLanguageTitle: 'Sprache wählen',
+
+      statusSearching: 'Suche nach Signal…',
+      statusWeak: 'Schwaches Signal…',
+      statusActive: 'GPS-Signal aktiv',
+      statusPermissionDenied: 'Zugriff verweigert',
+      statusUnsupported: 'Nicht unterstützt',
+      statusPaused: 'Pausiert',
+      statusAutoPaused: 'Automatisch pausiert',
+
+      hintUnsupported: 'Dieser Browser bietet keine Geolokalisierungs-API.',
+      hintPermissionDenied: 'Du hast den Standortzugriff blockiert. Aktiviere den Standort für diese Seite in den Browser-Einstellungen und versuche es erneut.',
+      hintDefault: 'Das GPS ist bereits im Hintergrund aktiv: warte auf eine gute Genauigkeit und tippe dann auf Start.',
+
+      statDistance: 'Distanz',
+      statTime: 'Zeit',
+      statAvgPace: 'Ø Tempo',
+      paceUnit: 'min/km',
+      inTarget: 'Im Ziel',
+
+      audioSectionLabel: 'Regelmäßige Ansagen',
+      everyWord: 'Alle',
+      unitMeters: 'Meter',
+      unitSeconds: 'Sekunden',
+
+      startBtn: 'Lauf starten',
+      pauseBtnPause: 'Pause',
+      pauseBtnResume: 'Fortsetzen',
+      endBtn: 'Beenden',
+
+      planToggleBtn: '📋 Plan',
+      targetToggleBtn: '🎯 Ziel',
+      addStepBtn: '+ Schritt',
+      addGroupBtn: '+ Wiederholung',
+
+      targetDistBtn: 'Distanz',
+      targetTimeBtn: 'Zeit',
+      targetRitmoLabel: 'Tempo',
+      targetPaceUnitTag: '/km · Toleranz ±10s',
+      placeholderMin: 'min',
+      placeholderSec: 'sek',
+
+      stepModeRun: 'Lauf',
+      stepModeRest: 'Erholung',
+      moveUpAria: 'Nach oben',
+      moveDownAria: 'Nach unten',
+      removeAria: 'Entfernen',
+      repeatWord: 'Wiederholen',
+      timesWord: 'mal',
+      removeGroupAria: 'Gruppe entfernen',
+      addStepInGroupBtn: '+ Schritt in der Gruppe',
+
+      historyTitle: 'Aktivität',
+      historyEmpty: 'Noch keine Läufe gespeichert.',
+      deleteRunAria: 'Lauf löschen',
+
+      endConfirmText: 'Möchtest du den Lauf wirklich beenden? Er wird in deiner Aktivität gespeichert.',
+      endConfirmBtn: 'Beenden & speichern',
+      cancelBtn: 'Abbrechen',
+      deleteConfirmText: 'Möchtest du diesen Lauf löschen? Das kann nicht rückgängig gemacht werden.',
+      deleteConfirmBtn: 'Endgültig löschen',
+
+      planStatusStepWord: 'Schritt',
+      targetCompletedStatus: 'Ziel erreicht',
+      planCompletedStatus: 'Plan abgeschlossen',
+
+      insufficientDataChart: 'Nicht genügend Daten für ein Diagramm',
+      chartHint: 'Gedrückt halten und ziehen, um das Tempo an jedem Punkt zu sehen',
+      kmSplitsLabel: 'Tempo pro km',
+      planLogLabel: 'Tempo pro Plan-Abschnitt',
+      kmWord: 'Km'
+    },
+
+    s: {
+      pacePhrase(sec){
+        const m = Math.floor(sec / 60);
+        const s = Math.round(sec % 60);
+        return s === 0 ? `${m} glatt` : `${m} ${s}`;
+      },
+      durationPhrase(sec){
+        sec = Math.max(0, Math.round(sec));
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+        const parts = [];
+        if (h > 0) parts.push(`${h} ${h === 1 ? 'Stunde' : 'Stunden'}`);
+        if (h > 0 || m > 0) parts.push(`${m} ${m === 1 ? 'Minute' : 'Minuten'}`);
+        if (h === 0) parts.push(`${s} ${s === 1 ? 'Sekunde' : 'Sekunden'}`);
+        return parts.join(' und ');
+      },
+      amountPhrase(durType, durValue){
+        return durType === 'distance' ? `${durValue} Meter` : `${durValue} Sekunden`;
+      },
+      distancePhrase(km){
+        return km >= 1 ? `${km.toFixed(2)} Kilometer` : `${Math.round(km * 1000)} Meter`;
+      },
+      currentPaceAnnouncement(paceSec){
+        return `Aktuelles Tempo, ${this.pacePhrase(paceSec)}`;
+      },
+      paceVsTarget(targetSec, diffSec, status){
+        const base = `Ziel ${this.pacePhrase(targetSec)}`;
+        if (status === 'on') return `${base}, genau im Ziel`;
+        if (status === 'slow') return `${base}, ${diffSec} Sekunden langsamer als das Ziel`;
+        return `${base}, ${Math.abs(diffSec)} Sekunden schneller als das Ziel`;
+      },
+      offTargetWarning(direction){
+        return direction === 'slow' ? 'Achtung, Tempo zu langsam' : 'Achtung, Tempo zu schnell';
+      },
+      repetitionIntro(repIndex, repTotal){
+        return repIndex === repTotal ? 'Letzte Wiederholung.' : `Wiederholung ${repIndex} von ${repTotal}.`;
+      },
+      restStart(amount){
+        return `Erholung, ${amount}.`;
+      },
+      runStart(amount, pacePhraseOrNull){
+        return `Los, ${amount}${pacePhraseOrNull ? ` im Tempo ${pacePhraseOrNull}` : ''}.`;
+      },
+      halfwaySegment(){
+        return 'Wir sind auf halber Strecke des Abschnitts.';
+      },
+      halfwayRunAvg(pacePhraseVal){
+        return `Wir sind auf halber Strecke des Abschnitts. Durchschnittstempo bisher, ${pacePhraseVal}.`;
+      },
+      endingSoonLastSegment(){
+        return 'Der Abschnitt ist fast vorbei. Das ist der letzte Teil des Plans.';
+      },
+      endingSoonNextRest(amount){
+        return `Der Abschnitt ist fast vorbei. Danach Erholung, ${amount}.`;
+      },
+      endingSoonNextRun(amount, pacePhraseOrNull){
+        return `Der Abschnitt ist fast vorbei. Danach los, ${amount}${pacePhraseOrNull ? ` im Tempo ${pacePhraseOrNull}` : ''}.`;
+      },
+      segmentAvgPace(pacePhraseVal){
+        return `Durchschnittstempo für den Abschnitt, ${pacePhraseVal}.`;
+      },
+      planCompleted(){
+        return 'Plan abgeschlossen!';
+      },
+      runSummary(distancePhraseVal, durationPhraseVal, pacePhraseOrNull){
+        const paceClause = pacePhraseOrNull ? `, Durchschnittstempo ${pacePhraseOrNull} pro Kilometer` : '';
+        return `Lauf abgeschlossen. ${distancePhraseVal} in ${durationPhraseVal}${paceClause}.`;
+      }
+    }
+  },
+
+  // ============================== NEDERLANDS ==============================
+  nl: {
+    locale: 'nl-NL',
+    speechLang: 'nl-NL',
+    nativeName: 'Nederlands',
+
+    t: {
+      historyAria: 'Activiteit',
+      settingsAria: 'Instellingen',
+      langSwitchAria: 'Taal wijzigen',
+      chooseLanguageTitle: 'Kies een taal',
+
+      statusSearching: 'Signaal zoeken…',
+      statusWeak: 'Zwak signaal…',
+      statusActive: 'GPS-signaal actief',
+      statusPermissionDenied: 'Toegang geweigerd',
+      statusUnsupported: 'Niet ondersteund',
+      statusPaused: 'Gepauzeerd',
+      statusAutoPaused: 'Automatisch gepauzeerd',
+
+      hintUnsupported: 'Deze browser biedt geen geolocatie-API.',
+      hintPermissionDenied: 'Je hebt locatietoegang geblokkeerd. Schakel de locatie voor deze pagina in via je browserinstellingen en probeer het opnieuw.',
+      hintDefault: 'GPS is al actief op de achtergrond: wacht tot de nauwkeurigheid goed is en tik dan op Start.',
+
+      statDistance: 'Afstand',
+      statTime: 'Tijd',
+      statAvgPace: 'Gem. tempo',
+      paceUnit: 'min/km',
+      inTarget: 'Op doel',
+
+      audioSectionLabel: 'Periodieke meldingen',
+      everyWord: 'Elke',
+      unitMeters: 'meter',
+      unitSeconds: 'seconden',
+
+      startBtn: 'Start hardlopen',
+      pauseBtnPause: 'Pauze',
+      pauseBtnResume: 'Hervatten',
+      endBtn: 'Beëindigen',
+
+      planToggleBtn: '📋 Plan',
+      targetToggleBtn: '🎯 Doel',
+      addStepBtn: '+ Stap',
+      addGroupBtn: '+ Herhaalgroep',
+
+      targetDistBtn: 'Afstand',
+      targetTimeBtn: 'Tijd',
+      targetRitmoLabel: 'Tempo',
+      targetPaceUnitTag: '/km · tolerantie ±10s',
+      placeholderMin: 'min',
+      placeholderSec: 'sec',
+
+      stepModeRun: 'Lopen',
+      stepModeRest: 'Rust',
+      moveUpAria: 'Omhoog',
+      moveDownAria: 'Omlaag',
+      removeAria: 'Verwijderen',
+      repeatWord: 'Herhaal',
+      timesWord: 'keer',
+      removeGroupAria: 'Groep verwijderen',
+      addStepInGroupBtn: '+ Stap in groep',
+
+      historyTitle: 'Activiteit',
+      historyEmpty: 'Nog geen lopen opgeslagen.',
+      deleteRunAria: 'Loop verwijderen',
+
+      endConfirmText: 'Wil je de loop echt beëindigen? Deze wordt opgeslagen in je activiteit.',
+      endConfirmBtn: 'Beëindigen en opslaan',
+      cancelBtn: 'Annuleren',
+      deleteConfirmText: 'Wil je deze loop verwijderen? Dit kan niet ongedaan worden gemaakt.',
+      deleteConfirmBtn: 'Definitief verwijderen',
+
+      planStatusStepWord: 'Stap',
+      targetCompletedStatus: 'Doel behaald',
+      planCompletedStatus: 'Plan voltooid',
+
+      insufficientDataChart: 'Onvoldoende gegevens voor een grafiek',
+      chartHint: 'Houd ingedrukt en sleep om het tempo op elk punt te zien',
+      kmSplitsLabel: 'Tempo per km',
+      planLogLabel: 'Tempo per planonderdeel',
+      kmWord: 'Km'
+    },
+
+    s: {
+      pacePhrase(sec){
+        const m = Math.floor(sec / 60);
+        const s = Math.round(sec % 60);
+        return s === 0 ? `${m} precies` : `${m} en ${s}`;
+      },
+      durationPhrase(sec){
+        sec = Math.max(0, Math.round(sec));
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+        const parts = [];
+        if (h > 0) parts.push(`${h} uur`);
+        if (h > 0 || m > 0) parts.push(`${m} ${m === 1 ? 'minuut' : 'minuten'}`);
+        if (h === 0) parts.push(`${s} ${s === 1 ? 'seconde' : 'seconden'}`);
+        return parts.join(' en ');
+      },
+      amountPhrase(durType, durValue){
+        return durType === 'distance' ? `${durValue} meter` : `${durValue} seconden`;
+      },
+      distancePhrase(km){
+        return km >= 1 ? `${km.toFixed(2)} kilometer` : `${Math.round(km * 1000)} meter`;
+      },
+      currentPaceAnnouncement(paceSec){
+        return `Huidig tempo, ${this.pacePhrase(paceSec)}`;
+      },
+      paceVsTarget(targetSec, diffSec, status){
+        const base = `Doel ${this.pacePhrase(targetSec)}`;
+        if (status === 'on') return `${base}, precies op doel`;
+        if (status === 'slow') return `${base}, ${diffSec} seconden langzamer dan het doel`;
+        return `${base}, ${Math.abs(diffSec)} seconden sneller dan het doel`;
+      },
+      offTargetWarning(direction){
+        return direction === 'slow' ? 'Let op, tempo te langzaam' : 'Let op, tempo te snel';
+      },
+      repetitionIntro(repIndex, repTotal){
+        return repIndex === repTotal ? 'Laatste herhaling.' : `Herhaling ${repIndex} van ${repTotal}.`;
+      },
+      restStart(amount){
+        return `Rust, ${amount}.`;
+      },
+      runStart(amount, pacePhraseOrNull){
+        return `Ga, ${amount}${pacePhraseOrNull ? ` in een tempo van ${pacePhraseOrNull}` : ''}.`;
+      },
+      halfwaySegment(){
+        return 'We zijn halverwege het onderdeel.';
+      },
+      halfwayRunAvg(pacePhraseVal){
+        return `We zijn halverwege het onderdeel. Gemiddeld tempo tot nu toe, ${pacePhraseVal}.`;
+      },
+      endingSoonLastSegment(){
+        return 'Het onderdeel is bijna voorbij. Dit is het laatste stuk van het plan.';
+      },
+      endingSoonNextRest(amount){
+        return `Het onderdeel is bijna voorbij. Daarna rust, ${amount}.`;
+      },
+      endingSoonNextRun(amount, pacePhraseOrNull){
+        return `Het onderdeel is bijna voorbij. Daarna gaan, ${amount}${pacePhraseOrNull ? ` in een tempo van ${pacePhraseOrNull}` : ''}.`;
+      },
+      segmentAvgPace(pacePhraseVal){
+        return `Gemiddeld tempo voor dit onderdeel, ${pacePhraseVal}.`;
+      },
+      planCompleted(){
+        return 'Plan voltooid!';
+      },
+      runSummary(distancePhraseVal, durationPhraseVal, pacePhraseOrNull){
+        const paceClause = pacePhraseOrNull ? `, gemiddeld tempo ${pacePhraseOrNull} per kilometer` : '';
+        return `Loop voltooid. ${distancePhraseVal} in ${durationPhraseVal}${paceClause}.`;
       }
     }
   }

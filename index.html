@@ -345,6 +345,9 @@
   .modal-actions{ display:flex; gap:10px; }
   .modal-actions .track-btn{ width:auto; flex:1; padding:12px; font-size:14px; }
 
+  .lang-option-list{ display:flex; flex-direction:column; gap:8px; }
+  .lang-option-list .ghost-btn{ width:100%; text-align:left; }
+
   /* ---------- history screen ---------- */
   .history-screen{ width:100%; max-width:440px; }
   .history-title{ font-size:18px; font-weight:700; margin:2px 0 14px; }
@@ -499,6 +502,13 @@
         <button class="track-btn ghost-solid" id="confirmCancelBtn" type="button">Annulla</button>
         <button class="track-btn end-btn" id="confirmEndBtn" type="button">Concludi e salva</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="langModal">
+    <div class="modal-card">
+      <p class="modal-text" id="langModalTitle">Scegli la lingua</p>
+      <div class="lang-option-list" id="langOptionList"></div>
     </div>
   </div>
 

@@ -41,6 +41,9 @@
   const settingsPanel = document.getElementById('settingsPanel');
   const mainScreen = document.getElementById('mainScreen');
   const langToggleBtn = document.getElementById('langToggleBtn');
+  const langModal = document.getElementById('langModal');
+  const langModalTitle = document.getElementById('langModalTitle');
+  const langOptionList = document.getElementById('langOptionList');
 
   const historyToggle = document.getElementById('historyToggle');
   const historyScreen = document.getElementById('historyScreen');
@@ -1335,19 +1338,38 @@
     historyTitle.textContent = T.historyTitle;
     historyEmptyHint.textContent = T.historyEmpty;
     confirmCancelBtn.textContent = T.cancelBtn;
+    langModalTitle.textContent = T.chooseLanguageTitle;
 
     if (!tracking) hintText.textContent = T.hintDefault;
     if (!historyScreen.classList.contains('hidden')) renderHistoryList();
     if (planActive) renderPlanStatus();
   }
 
-  langToggleBtn.addEventListener('click', () => {
-    const idx = SUPPORTED_LANGS.indexOf(currentLang);
-    currentLang = SUPPORTED_LANGS[(idx + 1) % SUPPORTED_LANGS.length];
+  function selectLanguage(lang){
+    currentLang = lang;
     localStorage.setItem(LANG_STORAGE_KEY, currentLang);
     T = I18N[currentLang].t;
     S = I18N[currentLang].s;
     applyTranslations();
+    langModal.classList.add('hidden');
+  }
+
+  function openLangModal(){
+    langOptionList.innerHTML = '';
+    SUPPORTED_LANGS.forEach(lang => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ghost-btn' + (lang === currentLang ? ' active' : '');
+      btn.textContent = I18N[lang].nativeName;
+      btn.addEventListener('click', () => selectLanguage(lang));
+      langOptionList.appendChild(btn);
+    });
+    langModal.classList.remove('hidden');
+  }
+
+  langToggleBtn.addEventListener('click', openLangModal);
+  langModal.addEventListener('click', (e) => {
+    if (e.target === langModal) langModal.classList.add('hidden');
   });
 
   statusText.textContent = T.statusSearching;
