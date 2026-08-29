@@ -106,34 +106,37 @@
   }
   .icon-btn.active{ border-color:var(--accent); color:var(--accent); }
 
-  /* ---------- setup panel ---------- */
-  .setup-panel{
-    width:100%; max-width:440px;
-    display:flex; flex-direction:column; gap:14px;
+  /* ---------- dropdown panels (settings, language) ---------- */
+  .dropdown-anchor{ position:relative; }
+  .dropdown-panel{
+    position:absolute; top:calc(100% + 8px); right:0;
+    min-width:230px;
+    background:var(--panel); border:1px solid var(--panel-border); border-radius:16px;
+    padding:16px; box-shadow:0 10px 30px rgba(15,30,20,0.18);
+    z-index:1500;
   }
-  .setup-panel.collapsed{ display:none; }
-
-  .setup-group{
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    border-radius:16px;
-    padding:14px;
+  .dropdown-panel.hidden{ display:none; }
+  .dropdown-title{
+    font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--text-dim); margin:0 0 10px;
   }
 
   .switch-row{
     display:flex; align-items:center; justify-content:space-between;
     font-size:14px; font-weight:600;
     cursor:pointer;
+    gap:16px;
   }
   .switch-row input[type=checkbox]{
     width:20px; height:20px; accent-color:var(--accent); cursor:pointer;
+    flex-shrink:0;
   }
 
   .target-inputs, .audio-inputs{
     display:flex; align-items:center; gap:8px;
     margin-top:12px;
   }
-  .target-inputs.hidden, .audio-inputs.hidden, .plan-builder.hidden{ display:none; }
+  .target-inputs.hidden, .plan-builder.hidden{ display:none; }
 
   input[type=number], select{
     background:rgba(15,30,20,0.04);
@@ -392,9 +395,31 @@
         <div class="status-accuracy" id="accuracyValue">—</div>
       </div>
       <div class="topbar-actions">
-        <button class="icon-btn" id="langToggleBtn" type="button" aria-label="Cambia lingua">IT</button>
+        <div class="dropdown-anchor">
+          <button class="icon-btn" id="langToggleBtn" type="button" aria-label="Cambia lingua">IT</button>
+          <div class="dropdown-panel hidden" id="langDropdown">
+            <p class="dropdown-title" id="langDropdownTitle">Scegli la lingua</p>
+            <div class="lang-option-list" id="langOptionList"></div>
+          </div>
+        </div>
         <button class="icon-btn" id="historyToggle" type="button" aria-label="Attività">🕘</button>
-        <button class="icon-btn" id="settingsToggle" type="button" aria-label="Impostazioni">⚙</button>
+        <div class="dropdown-anchor">
+          <button class="icon-btn" id="settingsToggle" type="button" aria-label="Impostazioni">⚙</button>
+          <section class="dropdown-panel hidden" id="settingsPanel">
+            <label class="switch-row">
+              <span id="audioSectionLabel">🔊 Aggiornamenti periodici</span>
+              <input type="checkbox" id="audioEnabled">
+            </label>
+            <div class="audio-inputs" id="audioInputs">
+              <span class="unit-tag" id="audioEveryLabel">Ogni</span>
+              <input type="number" id="audioInterval" min="10" value="500">
+              <select id="audioTrigger">
+                <option value="distance">metri</option>
+                <option value="time">secondi</option>
+              </select>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
 
@@ -422,24 +447,6 @@
 
         <div class="map-wrap hidden" id="liveMapWrap">
           <div class="live-map" id="liveMap"></div>
-        </div>
-      </section>
-
-      <section class="setup-panel collapsed" id="settingsPanel">
-
-        <div class="setup-group">
-          <label class="switch-row">
-            <span id="audioSectionLabel">Aggiornamenti periodici</span>
-            <input type="checkbox" id="audioEnabled">
-          </label>
-          <div class="audio-inputs hidden" id="audioInputs">
-            <span class="unit-tag" id="audioEveryLabel">Ogni</span>
-            <input type="number" id="audioInterval" min="10" value="500">
-            <select id="audioTrigger">
-              <option value="distance">metri</option>
-              <option value="time">secondi</option>
-            </select>
-          </div>
         </div>
       </section>
 
@@ -502,13 +509,6 @@
         <button class="track-btn ghost-solid" id="confirmCancelBtn" type="button">Annulla</button>
         <button class="track-btn end-btn" id="confirmEndBtn" type="button">Concludi e salva</button>
       </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay hidden" id="langModal">
-    <div class="modal-card">
-      <p class="modal-text" id="langModalTitle">Scegli la lingua</p>
-      <div class="lang-option-list" id="langOptionList"></div>
     </div>
   </div>
 

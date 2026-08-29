@@ -42,7 +42,7 @@ const I18N = {
       paceUnit: 'min/km',
       inTarget: 'In target',
 
-      audioSectionLabel: 'Aggiornamenti periodici',
+      audioSectionLabel: '🔊 Aggiornamenti periodici',
       everyWord: 'Ogni',
       unitMeters: 'metri',
       unitSeconds: 'secondi',
@@ -195,7 +195,7 @@ const I18N = {
       paceUnit: 'min/km',
       inTarget: 'On target',
 
-      audioSectionLabel: 'Periodic updates',
+      audioSectionLabel: '🔊 Periodic updates',
       everyWord: 'Every',
       unitMeters: 'meters',
       unitSeconds: 'seconds',
@@ -348,7 +348,7 @@ const I18N = {
       paceUnit: 'min/km',
       inTarget: 'En objetivo',
 
-      audioSectionLabel: 'Avisos periódicos',
+      audioSectionLabel: '🔊 Avisos periódicos',
       everyWord: 'Cada',
       unitMeters: 'metros',
       unitSeconds: 'segundos',
@@ -501,7 +501,7 @@ const I18N = {
       paceUnit: 'min/km',
       inTarget: 'Im Ziel',
 
-      audioSectionLabel: 'Regelmäßige Ansagen',
+      audioSectionLabel: '🔊 Regelmäßige Ansagen',
       everyWord: 'Alle',
       unitMeters: 'Meter',
       unitSeconds: 'Sekunden',
@@ -654,7 +654,7 @@ const I18N = {
       paceUnit: 'min/km',
       inTarget: 'Op doel',
 
-      audioSectionLabel: 'Periodieke meldingen',
+      audioSectionLabel: '🔊 Periodieke meldingen',
       everyWord: 'Elke',
       unitMeters: 'meter',
       unitSeconds: 'seconden',

@@ -41,8 +41,8 @@
   const settingsPanel = document.getElementById('settingsPanel');
   const mainScreen = document.getElementById('mainScreen');
   const langToggleBtn = document.getElementById('langToggleBtn');
-  const langModal = document.getElementById('langModal');
-  const langModalTitle = document.getElementById('langModalTitle');
+  const langDropdown = document.getElementById('langDropdown');
+  const langDropdownTitle = document.getElementById('langDropdownTitle');
   const langOptionList = document.getElementById('langOptionList');
 
   const historyToggle = document.getElementById('historyToggle');
@@ -326,7 +326,6 @@
     checkbox.addEventListener('change', () => panel.classList.toggle('hidden', !checkbox.checked));
   }
   bindToggle(targetEnabled, targetInputs);
-  bindToggle(audioEnabledBox, audioInputs);
 
   // Piano and Target are alternative ways to run: opening one closes the
   // other's panel. If a plan has at least one step it always takes priority
@@ -368,8 +367,9 @@
 
   settingsToggle.addEventListener('click', () => {
     showMainScreen();
-    const collapsed = settingsPanel.classList.toggle('collapsed');
-    settingsToggle.classList.toggle('active', !collapsed);
+    langDropdown.classList.add('hidden');
+    const nowHidden = settingsPanel.classList.toggle('hidden');
+    settingsToggle.classList.toggle('active', !nowHidden);
   });
 
   // Moves a plan-step/plan-group one position up (-1) or down (+1) among its siblings.
@@ -1202,7 +1202,7 @@
     appEl.classList.add('tracking');
     appEl.classList.remove('error');
     hintText.textContent = '';
-    settingsPanel.classList.add('collapsed');
+    settingsPanel.classList.add('hidden');
     settingsToggle.classList.remove('active');
     planBuilderHome.classList.add('hidden');
     planToggleBtn.classList.remove('active');
@@ -1227,7 +1227,7 @@
     appEl.classList.remove('tracking', 'paused', 'error', 'plan-good', 'plan-bad');
     setStatus(T.statusActive);
     hintText.textContent = T.hintDefault;
-    settingsPanel.classList.add('collapsed');
+    settingsPanel.classList.add('hidden');
     settingsToggle.classList.remove('active');
     startBtn.classList.remove('hidden');
     runControls.classList.add('hidden');
@@ -1338,7 +1338,7 @@
     historyTitle.textContent = T.historyTitle;
     historyEmptyHint.textContent = T.historyEmpty;
     confirmCancelBtn.textContent = T.cancelBtn;
-    langModalTitle.textContent = T.chooseLanguageTitle;
+    langDropdownTitle.textContent = T.chooseLanguageTitle;
 
     if (!tracking) hintText.textContent = T.hintDefault;
     if (!historyScreen.classList.contains('hidden')) renderHistoryList();
@@ -1351,10 +1351,10 @@
     T = I18N[currentLang].t;
     S = I18N[currentLang].s;
     applyTranslations();
-    langModal.classList.add('hidden');
+    langDropdown.classList.add('hidden');
   }
 
-  function openLangModal(){
+  function openLangDropdown(){
     langOptionList.innerHTML = '';
     SUPPORTED_LANGS.forEach(lang => {
       const btn = document.createElement('button');
@@ -1364,12 +1364,30 @@
       btn.addEventListener('click', () => selectLanguage(lang));
       langOptionList.appendChild(btn);
     });
-    langModal.classList.remove('hidden');
+    settingsPanel.classList.add('hidden');
+    settingsToggle.classList.remove('active');
+    langDropdown.classList.remove('hidden');
   }
 
-  langToggleBtn.addEventListener('click', openLangModal);
-  langModal.addEventListener('click', (e) => {
-    if (e.target === langModal) langModal.classList.add('hidden');
+  langToggleBtn.addEventListener('click', () => {
+    if (!langDropdown.classList.contains('hidden')){
+      langDropdown.classList.add('hidden');
+      return;
+    }
+    openLangDropdown();
+  });
+
+  // Both dropdowns are anchored popovers, not full-screen modals — clicking
+  // anywhere outside a dropdown (and outside the button that opens it)
+  // closes it, the way a native menu would.
+  document.addEventListener('click', (e) => {
+    if (!langDropdown.contains(e.target) && e.target !== langToggleBtn){
+      langDropdown.classList.add('hidden');
+    }
+    if (!settingsPanel.contains(e.target) && e.target !== settingsToggle){
+      settingsPanel.classList.add('hidden');
+      settingsToggle.classList.remove('active');
+    }
   });
 
   statusText.textContent = T.statusSearching;
