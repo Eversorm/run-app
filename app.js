@@ -155,9 +155,13 @@
   let lastAnnounceTimeMs = 0;
   let lastAnnouncedTargetSec = null;
 
-  // ---- reactive off-target warning: fires once per "excursion" past ±30s ----
+  // ---- reactive off-target warning: fires once per "excursion" past ±30s,
+  // but only once the excursion has held for PACE_WARN_PERSIST_MS straight —
+  // a brief GPS noise spike resets the timer instead of triggering a warning ----
   const PACE_WARN_THRESHOLD_SEC = 30;
+  const PACE_WARN_PERSIST_MS = 5000;
   let paceWarnActive = false;
+  let offTargetSinceMs = null;
 
   // ---- plan engine state ----
   let planActive = false;
@@ -803,16 +807,30 @@
     if (mode === 'error') appEl.classList.add('error');
   }
 
-  // Fires a short spoken warning the moment the pace crosses ±30s away from
-  // the active target, and re-arms once it's back within that window.
+  // Fires a short spoken warning only once the pace has been continuously
+  // ±30s away from the active target for PACE_WARN_PERSIST_MS straight —
+  // a momentary GPS/pace blip resets the timer rather than triggering a
+  // warning. Re-arms once the pace is back within the window.
   function maybeWarnOffTarget(diff){
-    if (diff == null || !tracking || paused){ paceWarnActive = false; return; }
+    if (diff == null || !tracking || paused){
+      paceWarnActive = false;
+      offTargetSinceMs = null;
+      return;
+    }
     const isOff = Math.abs(diff) >= PACE_WARN_THRESHOLD_SEC;
-    if (isOff && !paceWarnActive){
+    if (!isOff){
+      paceWarnActive = false;
+      offTargetSinceMs = null;
+      return;
+    }
+    if (paceWarnActive) return; // already warned for this excursion
+    if (offTargetSinceMs == null){
+      offTargetSinceMs = Date.now();
+      return;
+    }
+    if (Date.now() - offTargetSinceMs >= PACE_WARN_PERSIST_MS){
       paceWarnActive = true;
       speak(buildOffTargetWarning(diff));
-    } else if (!isOff){
-      paceWarnActive = false;
     }
   }
 
