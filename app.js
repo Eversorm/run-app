@@ -19,6 +19,7 @@
   const RUNS_STORAGE_KEY = 'ritmoCorsaRuns';
   const MAX_SAVED_RUNS = 100;
   const LANG_STORAGE_KEY = 'ritmoCorsaLang';
+  const REF_5K_STORAGE_KEY = 'ritmoCorsaRef5k';
 
   // ---- language state: T = current UI strings, S = current speech-phrase
   // builders. Everything below reads through T/S and never contains
@@ -72,6 +73,20 @@
   const planSteps = document.getElementById('planSteps');
   const addStepBtn = document.getElementById('addStepBtn');
   const addGroupBtn = document.getElementById('addGroupBtn');
+
+  const planTypeRow = document.getElementById('planTypeRow');
+  const planTypeCustom = document.getElementById('planTypeCustom');
+  const planTypeEasy = document.getElementById('planTypeEasy');
+  const planTypeLong = document.getElementById('planTypeLong');
+  const planTypeReps = document.getElementById('planTypeReps');
+  const planTypeThreshold = document.getElementById('planTypeThreshold');
+  const planGenerator = document.getElementById('planGenerator');
+  const genKm = document.getElementById('genKm');
+  const genKmLabel = document.getElementById('genKmLabel');
+  const gen5kMin = document.getElementById('gen5kMin');
+  const gen5kSec = document.getElementById('gen5kSec');
+  const genPaceLabel = document.getElementById('genPaceLabel');
+  const genGenerateBtn = document.getElementById('genGenerateBtn');
 
   const targetToggleBtn = document.getElementById('targetToggleBtn');
   const targetBuilderHome = document.getElementById('targetBuilderHome');
@@ -320,6 +335,110 @@
   }
 
   // ===================================================================
+  // AUTO-GENERATED PLANS — Jack Daniels' VDOT methodology: one reference
+  // pace (5K) yields a single fitness score, from which every training
+  // pace is derived as a fixed percentage of it. Two published equations
+  // (Daniels & Gilbert) do all the work — no lookup tables needed.
+  // Zone percentages verified against Daniels' published VDOT-50 paces:
+  // Easy 70%, Threshold 88%, Interval 98%, Repetition 105%.
+  // ===================================================================
+  const VDOT_ZONE_PERCENT = { easy: 0.70, threshold: 0.88, interval: 0.98, repetition: 1.05 };
+
+  // VO2 cost (ml/kg/min) of running at velocity v (meters/minute).
+  function vo2AtVelocity(v){
+    return -4.60 + 0.182258 * v + 0.000104 * v * v;
+  }
+  // Inverse of the above: velocity (m/min) that costs a given VO2.
+  function velocityAtVo2(vo2){
+    const a = 0.000104, b = 0.182258, c = -4.60 - vo2;
+    return (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+  }
+  // Fraction of VO2max sustainable for a given race duration (minutes).
+  function vo2maxFractionForDuration(tMin){
+    return 0.8 + 0.1894393 * Math.exp(-0.012778 * tMin) + 0.2989558 * Math.exp(-0.1932605 * tMin);
+  }
+  // VDOT (fitness score) from a 5K time in seconds.
+  function vdotFrom5k(time5kSec){
+    const tMin = time5kSec / 60;
+    const v = 5000 / tMin; // m/min
+    return vo2AtVelocity(v) / vo2maxFractionForDuration(tMin);
+  }
+  // Pace (sec/km) for a given training zone, from a 5K time in seconds.
+  function zonePaceSecPerKm(time5kSec, zone){
+    const vdot = vdotFrom5k(time5kSec);
+    const v = velocityAtVo2(vdot * VDOT_ZONE_PERCENT[zone]); // m/min
+    return 60000 / v;
+  }
+
+  // Sets a step row's mode via the same path the UI uses (dispatching a
+  // real 'change' event), so the existing delegated listener applies its
+  // usual defaults — we then overwrite pace/amount with computed values.
+  function setStepMode(row, mode){
+    const sel = row.querySelector('.step-mode');
+    sel.value = mode;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  function setStepPace(row, paceSec){
+    const p = Math.round(paceSec);
+    row.querySelector('.step-pace-min').value = Math.floor(p / 60);
+    row.querySelector('.step-pace-sec').value = p % 60;
+  }
+
+  // Easy run / Lunga: Daniels prescribes both at Easy pace — a long run is
+  // just an easy run covering more distance, not a different pace zone.
+  function generateContinuousPlan(totalKm, paceSecPerKm){
+    planSteps.innerHTML = '';
+    const row = makeStepRow();
+    planSteps.appendChild(row); // append before dispatching 'change' so the delegated listener on #planSteps sees it
+    setStepMode(row, 'run');
+    row.querySelector('.step-durvalue').value = Math.round(totalKm * 1000);
+    setStepPace(row, paceSecPerKm);
+  }
+
+  // Ripetute: picks a rep distance from the total volume, then reps + 1:1
+  // jog recovery to cover it — all editable afterward like any plan.
+  function generateRepsPlan(totalKm, time5kSec){
+    let repM;
+    if (totalKm <= 3) repM = 400;
+    else if (totalKm <= 6) repM = 800;
+    else if (totalKm <= 10) repM = 1000;
+    else repM = 1200;
+
+    const zone = repM <= 600 ? 'repetition' : 'interval';
+    const paceSecPerKm = zonePaceSecPerKm(time5kSec, zone);
+    const repSec = paceSecPerKm * (repM / 1000);
+    const reps = Math.max(3, Math.round((totalKm * 1000) / repM));
+
+    planSteps.innerHTML = '';
+    const group = makeGroupBlock();
+    planSteps.appendChild(group); // append before touching the steps inside, same reason as above
+    group.querySelector('.group-reps').value = reps;
+    const stepsWrap = group.querySelector('.group-steps');
+    stepsWrap.innerHTML = '';
+
+    const runRow = makeStepRow();
+    stepsWrap.appendChild(runRow);
+    setStepMode(runRow, 'run');
+    runRow.querySelector('.step-durvalue').value = repM;
+    setStepPace(runRow, paceSecPerKm);
+
+    const restRow = makeStepRow();
+    stepsWrap.appendChild(restRow);
+    setStepMode(restRow, 'rest');
+    restRow.querySelector('.step-durvalue').value = Math.round(repSec);
+  }
+
+  function generatePlan(type, totalKm, time5kSec){
+    if (type === 'easy' || type === 'long'){
+      generateContinuousPlan(totalKm, zonePaceSecPerKm(time5kSec, 'easy'));
+    } else if (type === 'threshold'){
+      generateContinuousPlan(totalKm, zonePaceSecPerKm(time5kSec, 'threshold'));
+    } else if (type === 'reps'){
+      generateRepsPlan(totalKm, time5kSec);
+    }
+  }
+
+  // ===================================================================
   // Setup panel interactions
   // ===================================================================
   function bindToggle(checkbox, panel){
@@ -430,6 +549,37 @@
 
   addStepBtn.addEventListener('click', () => planSteps.appendChild(makeStepRow()));
   addGroupBtn.addEventListener('click', () => planSteps.appendChild(makeGroupBlock()));
+
+  // Workout-type selector: "custom" (the default) hides the generator and
+  // leaves the manual +Passo/+Gruppo builder as the only way in; any other
+  // type shows the km + 5K-pace generator for that template.
+  planTypeRow.addEventListener('click', (e) => {
+    const btn = e.target.closest('.plan-type-btn');
+    if (!btn) return;
+    planTypeRow.querySelectorAll('.plan-type-btn').forEach(b => b.classList.toggle('active', b === btn));
+    planGenerator.classList.toggle('hidden', btn.dataset.type === 'custom');
+  });
+
+  // The 5K reference pace changes only every few weeks of training, so it's
+  // worth remembering between sessions instead of retyping it each time.
+  const savedRef5k = localStorage.getItem(REF_5K_STORAGE_KEY);
+  if (savedRef5k){
+    const savedSec = parseInt(savedRef5k, 10);
+    if (savedSec > 0){
+      gen5kMin.value = Math.floor(savedSec / 60);
+      gen5kSec.value = savedSec % 60;
+    }
+  }
+
+  genGenerateBtn.addEventListener('click', () => {
+    const type = planTypeRow.querySelector('.plan-type-btn.active').dataset.type;
+    if (type === 'custom') return;
+    const totalKm = parseFloat(genKm.value) || 0;
+    const time5kSec = (parseInt(gen5kMin.value, 10) || 0) * 60 + (parseInt(gen5kSec.value, 10) || 0);
+    if (totalKm <= 0 || time5kSec <= 0) return;
+    localStorage.setItem(REF_5K_STORAGE_KEY, String(time5kSec));
+    generatePlan(type, totalKm, time5kSec);
+  });
 
   planSteps.addEventListener('click', (e) => {
     if (e.target.classList.contains('step-remove')) e.target.closest('.plan-step').remove();
@@ -1334,6 +1484,17 @@
     targetPaceUnitTag.textContent = T.targetPaceUnitTag;
     targetMin.placeholder = T.placeholderMin;
     targetSec.placeholder = T.placeholderSec;
+
+    planTypeCustom.textContent = T.planTypeCustom;
+    planTypeEasy.textContent = T.planTypeEasy;
+    planTypeLong.textContent = T.planTypeLong;
+    planTypeReps.textContent = T.planTypeReps;
+    planTypeThreshold.textContent = T.planTypeThreshold;
+    genKmLabel.textContent = T.genKmLabel;
+    genPaceLabel.textContent = T.genPaceLabel;
+    genGenerateBtn.textContent = T.genGenerateBtn;
+    gen5kMin.placeholder = T.placeholderMin;
+    gen5kSec.placeholder = T.placeholderSec;
 
     historyTitle.textContent = T.historyTitle;
     historyEmptyHint.textContent = T.historyEmpty;

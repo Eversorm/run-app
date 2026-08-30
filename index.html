@@ -170,6 +170,11 @@
     border-color:var(--warn); color:var(--warn); background:var(--warn-soft);
   }
 
+  .plan-type-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .plan-generator{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .plan-generator .track-btn{ width:auto; }
+  .plan-generator.hidden{ display:none; }
+
   .plan-builder-home{
     width:100%; max-width:440px;
     display:flex; flex-direction:column; gap:10px;
@@ -461,6 +466,26 @@
           <button class="track-btn ghost-solid" id="targetToggleBtn" type="button">🎯 Target</button>
         </div>
         <div class="plan-builder-home hidden" id="planBuilderHome">
+          <div class="plan-type-row" id="planTypeRow">
+            <button class="ghost-btn plan-type-btn active" data-type="custom" type="button" id="planTypeCustom">Personalizzata</button>
+            <button class="ghost-btn plan-type-btn" data-type="easy" type="button" id="planTypeEasy">Easy run</button>
+            <button class="ghost-btn plan-type-btn" data-type="long" type="button" id="planTypeLong">Lunga</button>
+            <button class="ghost-btn plan-type-btn" data-type="reps" type="button" id="planTypeReps">Ripetute</button>
+            <button class="ghost-btn plan-type-btn" data-type="threshold" type="button" id="planTypeThreshold">Soglia</button>
+          </div>
+          <div class="plan-generator hidden" id="planGenerator">
+            <div class="target-inputs">
+              <input type="number" id="genKm" min="0.5" step="0.5" value="5">
+              <span class="unit-tag" id="genKmLabel">km totali</span>
+            </div>
+            <div class="target-inputs">
+              <input type="number" id="gen5kMin" min="0" placeholder="min" value="25" style="width:48px">
+              <span>:</span>
+              <input type="number" id="gen5kSec" min="0" max="59" placeholder="sec" value="0" style="width:48px">
+              <span class="unit-tag" id="genPaceLabel">ritmo sui 5 km</span>
+            </div>
+            <button class="track-btn" id="genGenerateBtn" type="button">Genera piano</button>
+          </div>
           <div id="planSteps"></div>
           <div class="plan-actions">
             <button class="ghost-btn" id="addStepBtn" type="button">+ Passo</button>

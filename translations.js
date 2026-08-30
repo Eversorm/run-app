@@ -92,7 +92,16 @@ const I18N = {
       chartHint: 'Tieni premuto e scorri per vedere il ritmo punto per punto',
       kmSplitsLabel: 'Ritmo per km',
       planLogLabel: 'Ritmo per segmento del piano',
-      kmWord: 'Km'
+      kmWord: 'Km',
+
+      planTypeCustom: 'Personalizzata',
+      planTypeEasy: 'Easy run',
+      planTypeLong: 'Lunga',
+      planTypeReps: 'Ripetute',
+      planTypeThreshold: 'Soglia',
+      genKmLabel: 'km totali',
+      genPaceLabel: 'ritmo sui 5 km',
+      genGenerateBtn: 'Genera piano'
     },
 
     s: {
@@ -245,7 +254,16 @@ const I18N = {
       chartHint: 'Press and drag to see the pace at each point',
       kmSplitsLabel: 'Pace per km',
       planLogLabel: 'Pace per plan segment',
-      kmWord: 'Km'
+      kmWord: 'Km',
+
+      planTypeCustom: 'Custom',
+      planTypeEasy: 'Easy run',
+      planTypeLong: 'Long run',
+      planTypeReps: 'Repeats',
+      planTypeThreshold: 'Threshold',
+      genKmLabel: 'total km',
+      genPaceLabel: '5K pace',
+      genGenerateBtn: 'Generate plan'
     },
 
     s: {
@@ -398,7 +416,16 @@ const I18N = {
       chartHint: 'Mantén pulsado y desliza para ver el ritmo punto por punto',
       kmSplitsLabel: 'Ritmo por km',
       planLogLabel: 'Ritmo por segmento del plan',
-      kmWord: 'Km'
+      kmWord: 'Km',
+
+      planTypeCustom: 'Personalizado',
+      planTypeEasy: 'Carrera suave',
+      planTypeLong: 'Tirada larga',
+      planTypeReps: 'Series',
+      planTypeThreshold: 'Umbral',
+      genKmLabel: 'km totales',
+      genPaceLabel: 'ritmo en 5 km',
+      genGenerateBtn: 'Generar plan'
     },
 
     s: {
@@ -551,7 +578,16 @@ const I18N = {
       chartHint: 'Gedrückt halten und ziehen, um das Tempo an jedem Punkt zu sehen',
       kmSplitsLabel: 'Tempo pro km',
       planLogLabel: 'Tempo pro Plan-Abschnitt',
-      kmWord: 'Km'
+      kmWord: 'Km',
+
+      planTypeCustom: 'Eigene',
+      planTypeEasy: 'Ruhiger Lauf',
+      planTypeLong: 'Langer Lauf',
+      planTypeReps: 'Intervalle',
+      planTypeThreshold: 'Schwelle',
+      genKmLabel: 'km gesamt',
+      genPaceLabel: 'Tempo auf 5 km',
+      genGenerateBtn: 'Plan erstellen'
     },
 
     s: {
@@ -704,7 +740,16 @@ const I18N = {
       chartHint: 'Houd ingedrukt en sleep om het tempo op elk punt te zien',
       kmSplitsLabel: 'Tempo per km',
       planLogLabel: 'Tempo per planonderdeel',
-      kmWord: 'Km'
+      kmWord: 'Km',
+
+      planTypeCustom: 'Aangepast',
+      planTypeEasy: 'Rustige duurloop',
+      planTypeLong: 'Lange duurloop',
+      planTypeReps: 'Intervallen',
+      planTypeThreshold: 'Drempel',
+      genKmLabel: 'totaal km',
+      genPaceLabel: 'tempo op 5 km',
+      genGenerateBtn: 'Plan genereren'
     },
 
     s: {
