@@ -1173,7 +1173,7 @@
         const rep = seg.repTotal ? ` ↻${seg.repIndex}/${seg.repTotal}` : '';
         const amount = formatAmountShort(seg.durType, seg.durValue);
         if (seg.mode === 'rest'){
-          html += `<div class="plan-row"><span>${T.stepModeRest} (${amount})${rep}</span><span>${Math.round(seg.actualDurationSec)}s</span></div>`;
+          html += `<div class="plan-row"><span>${T.stepModeRest} (${amount})${rep}</span><span>${Math.round(seg.actualDurationSec)}s · ${formatPace(seg.achievedPaceSec)} /km</span></div>`;
         } else {
           const target = seg.paceSec ? ` ${formatPace(seg.paceSec)}` : '';
           html += `<div class="plan-row"><span>${T.stepModeRun} (${amount}${target})${rep}</span><span>${formatPace(seg.achievedPaceSec)} /km</span></div>`;
