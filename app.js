@@ -8,12 +8,12 @@
   const GAUGE_FAST_SEC = 270;      // 4:30/km -> gauge reads full
   const GAUGE_SLOW_SEC = 510;      // 8:30/km -> gauge reads empty
   const MAX_PACE_SEC = 1200;       // 20:00/km -> beyond this, show --:-- (includes walking)
-  const SPEED_SMOOTHING_ALPHA_BASE = 0.55;  // light baseline smoothing for normal, steady conditions
+  const SPEED_SMOOTHING_ALPHA_BASE = 0.35;  // baseline smoothing for normal, steady conditions
   const SPEED_SMOOTHING_ALPHA_POOR = 0.25;  // extra damping only when GPS accuracy is genuinely poor
   const SPEED_SMOOTHING_ALPHA_SNAP = 0.9;   // near-immediate response to a real pace change
   const ACCURACY_GOOD_M = 20;               // at/below this, use the light baseline
   const ACCURACY_POOR_M = 35;               // at/above this, damp harder
-  const SPEED_CHANGE_SNAP_RATIO = 0.25;     // relative change vs current speed that counts as "real", not noise
+  const SPEED_CHANGE_SNAP_RATIO = 0.38;     // relative change vs current speed that counts as "real", not noise
   const IMPLAUSIBLE_SPEED_KMH = 35;         // faster than this for a runner -> treat the fix as a glitch and drop it
   const MIN_SAVE_DISTANCE_KM = 0.03; // don't save accidental taps with almost no distance
   const RUNS_STORAGE_KEY = 'ritmoCorsaRuns';
@@ -159,7 +159,7 @@
   // but only once the excursion has held for PACE_WARN_PERSIST_MS straight —
   // a brief GPS noise spike resets the timer instead of triggering a warning ----
   const PACE_WARN_THRESHOLD_SEC = 30;
-  const PACE_WARN_PERSIST_MS = 5000;
+  const PACE_WARN_PERSIST_MS = 10000;
   let paceWarnActive = false;
   let offTargetSinceMs = null;
 
@@ -579,10 +579,13 @@
     const type = planTypeRow.querySelector('.plan-type-btn.active').dataset.type;
     if (type === 'custom') return;
     const totalKm = parseFloat(genKm.value) || 0;
-    const time5kSec = (parseInt(gen5kMin.value, 10) || 0) * 60 + (parseInt(gen5kSec.value, 10) || 0);
-    if (totalKm <= 0 || time5kSec <= 0) return;
-    localStorage.setItem(REF_5K_STORAGE_KEY, String(time5kSec));
-    generatePlan(type, totalKm, time5kSec);
+    // gen5kMin/gen5kSec hold the average pace per km over the 5K reference
+    // ("ritmo sui 5 km"); the VDOT formulas need the total 5K time, so scale
+    // the pace by the reference distance instead of using it as-is.
+    const pacePerKmSec = (parseInt(gen5kMin.value, 10) || 0) * 60 + (parseInt(gen5kSec.value, 10) || 0);
+    if (totalKm <= 0 || pacePerKmSec <= 0) return;
+    localStorage.setItem(REF_5K_STORAGE_KEY, String(pacePerKmSec));
+    generatePlan(type, totalKm, pacePerKmSec * 5);
   });
 
   planSteps.addEventListener('click', (e) => {
@@ -1170,10 +1173,10 @@
         const rep = seg.repTotal ? ` ↻${seg.repIndex}/${seg.repTotal}` : '';
         const amount = formatAmountShort(seg.durType, seg.durValue);
         if (seg.mode === 'rest'){
-          html += `<div class="plan-row"><span>${T.stepModeRest} (${amount})${rep}</span><span>${formatDuration(seg.actualDurationSec)} · ${formatPace(seg.achievedPaceSec)} /km</span></div>`;
+          html += `<div class="plan-row"><span>${T.stepModeRest} (${amount})${rep}</span><span>${Math.round(seg.actualDurationSec)}s</span></div>`;
         } else {
           const target = seg.paceSec ? ` ${formatPace(seg.paceSec)}` : '';
-          html += `<div class="plan-row"><span>${T.stepModeRun} (${amount}${target})${rep}</span><span>${formatPace(seg.achievedPaceSec)}</span></div>`;
+          html += `<div class="plan-row"><span>${T.stepModeRun} (${amount}${target})${rep}</span><span>${formatPace(seg.achievedPaceSec)} /km</span></div>`;
         }
       });
     }
