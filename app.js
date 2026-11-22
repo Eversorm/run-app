@@ -8,9 +8,10 @@
   const GAUGE_FAST_SEC = 270;      // 4:30/km -> gauge reads full
   const GAUGE_SLOW_SEC = 510;      // 8:30/km -> gauge reads empty
   const MAX_PACE_SEC = 1200;       // 20:00/km -> beyond this, show --:-- (includes walking)
-  const SPEED_SMOOTHING_ALPHA_BASE = 0.35;  // baseline smoothing for normal, steady conditions
-  const SPEED_SMOOTHING_ALPHA_POOR = 0.25;  // extra damping only when GPS accuracy is genuinely poor
-  const SPEED_SMOOTHING_ALPHA_SNAP = 0.9;   // near-immediate response to a real pace change
+  const SPEED_SMOOTHING_ALPHA_BASE = 0.22;  // baseline smoothing for normal, steady conditions
+  const SPEED_SMOOTHING_ALPHA_POOR = 0.15;  // extra damping only when GPS accuracy is genuinely poor
+  const SPEED_SMOOTHING_ALPHA_SNAP = 0.75;  // fast response to a real (confirmed) pace change
+  const SPEED_SNAP_CONFIRM_FIXES = 2;       // consecutive fixes in the same direction needed before snapping
   const ACCURACY_GOOD_M = 20;               // at/below this, use the light baseline
   const ACCURACY_POOR_M = 35;               // at/above this, damp harder
   const SPEED_CHANGE_SNAP_RATIO = 0.38;     // relative change vs current speed that counts as "real", not noise
@@ -140,6 +141,8 @@
   let pausedIsAuto = false;   // true when the current pause was triggered automatically
   let lastPos = null;
   let smoothedSpeedKmh = 0;
+  let snapStreak = 0;       // consecutive fixes deviating strongly in the same direction
+  let snapDirection = 0;    // +1 faster, -1 slower
   let currentPaceSec = null; // null = stopped/too slow/uncertain -> shown as --:--
   let totalDistanceKm = 0;
   let trackingStartTime = null;
@@ -209,7 +212,7 @@
   // (clean fix -> light damping, noisy fix -> more), but a relative change
   // large enough to be a genuine pace shift (not just jitter) always snaps
   // through almost immediately, regardless of accuracy.
-  function speedSmoothingAlpha(accuracy, relDelta){
+  function speedSmoothingAlpha(accuracy, relDelta, snapConfirmed){
     let alpha;
     if (accuracy == null || accuracy <= ACCURACY_GOOD_M) alpha = SPEED_SMOOTHING_ALPHA_BASE;
     else if (accuracy >= ACCURACY_POOR_M) alpha = SPEED_SMOOTHING_ALPHA_POOR;
@@ -217,7 +220,7 @@
       const t = (accuracy - ACCURACY_GOOD_M) / (ACCURACY_POOR_M - ACCURACY_GOOD_M);
       alpha = SPEED_SMOOTHING_ALPHA_BASE + t * (SPEED_SMOOTHING_ALPHA_POOR - SPEED_SMOOTHING_ALPHA_BASE);
     }
-    if (relDelta > SPEED_CHANGE_SNAP_RATIO) alpha = Math.max(alpha, SPEED_SMOOTHING_ALPHA_SNAP);
+    if (snapConfirmed && relDelta > SPEED_CHANGE_SNAP_RATIO) alpha = Math.max(alpha, SPEED_SMOOTHING_ALPHA_SNAP);
     return alpha;
   }
 
@@ -938,7 +941,19 @@
     const relDelta = smoothedSpeedKmh > 0.3
       ? Math.abs(speedKmh - smoothedSpeedKmh) / smoothedSpeedKmh
       : 1;
-    const alpha = speedSmoothingAlpha(accuracy, relDelta);
+    // A single outlier fix is treated as jitter: only when the deviation
+    // persists in the same direction for a few consecutive fixes is it
+    // considered a genuine pace change and allowed to snap through.
+    const dir = Math.sign(speedKmh - smoothedSpeedKmh);
+    if (relDelta > SPEED_CHANGE_SNAP_RATIO && dir !== 0){
+      snapStreak = (dir === snapDirection) ? snapStreak + 1 : 1;
+      snapDirection = dir;
+    } else {
+      snapStreak = 0;
+      snapDirection = 0;
+    }
+    const snapConfirmed = smoothedSpeedKmh <= 0.3 || snapStreak >= SPEED_SNAP_CONFIRM_FIXES;
+    const alpha = speedSmoothingAlpha(accuracy, relDelta, snapConfirmed);
     smoothedSpeedKmh += alpha * (speedKmh - smoothedSpeedKmh);
 
     const rawPaceSec = smoothedSpeedKmh > 0.05 ? 3600 / smoothedSpeedKmh : Infinity;
@@ -1323,6 +1338,8 @@
 
     lastPos = null;
     smoothedSpeedKmh = 0;
+    snapStreak = 0;
+    snapDirection = 0;
     currentPaceSec = null;
     totalDistanceKm = 0;
     trackingStartTime = Date.now();
